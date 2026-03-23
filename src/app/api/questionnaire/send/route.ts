@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
     if (isNaN(householdId)) return NextResponse.json({ error: "householdId חסר" }, { status: 400 });
 
     const token = randomUUID();
+    // Never pass id - Prisma auto-generates via @default(autoincrement())
     await prisma.taxRefundQuestionnaire.create({
       data: {
         householdId,

@@ -12,6 +12,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
+    "db:fix-questionnaire-sequence": "ts-node scripts/fix-questionnaire-sequence.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
