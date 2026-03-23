@@ -167,7 +167,7 @@ export function ClientProfile({ household, agents, clerks, documents, caseStatus
 
       {tab === "info" && (
         <HouseholdForm
-          household={household}
+          household={household as any}
           agents={agents}
           clerks={clerks}
           readOnly={!canEdit}
