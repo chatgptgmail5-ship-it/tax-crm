@@ -1,0 +1,298 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { MessageCircle, Pencil } from "lucide-react";
+import { formatDate } from "@/lib/utils";
+import { ID_FIELDS, OPTIONS, GENDER_OPTIONS, MARITAL_OPTIONS, NUM_QUESTIONS } from "@/lib/questionnaire-fields";
+
+const PHONE_ERROR = "לא נמצא מספר טלפון ללקוח";
+
+function getClientPhone(household: { persons: { phone: string | null }[] }): string | null {
+  for (const p of household.persons) {
+    const raw = p.phone?.trim();
+    if (raw) return raw;
+  }
+  return null;
+}
+
+/** Normalize phone for wa.me: 052xxxxxxx → 97252xxxxxxx */
+function normalizePhone(rawPhone: string): string | null {
+  let phone = rawPhone.replace(/\D/g, "");
+  if (!phone) return null;
+  if (phone.startsWith("0")) {
+    phone = "972" + phone.slice(1);
+  } else if (!phone.startsWith("972") && phone.length >= 9) {
+    phone = "972" + phone;
+  }
+  if (phone.length < 10 || phone.length > 12) return null;
+  return phone;
+}
+
+type Questionnaire = {
+  id: number;
+  token: string;
+  dateSent: string;
+  dateReceived: string | null;
+  answers: Record<string, string> | null;
+  result: string | null;
+};
+
+type Props = {
+  householdId: number;
+  household: { persons: { firstName: string | null; lastName: string | null; phone: string | null }[] };
+};
+
+export function RefundQuestionnaireSection({ householdId, household }: Props) {
+  const [q, setQ] = useState<Questionnaire | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editAnswers, setEditAnswers] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  const fetchLatest = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/questionnaire/latest?householdId=${householdId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setQ(data);
+        setEditAnswers(data?.answers ?? {});
+      }
+    } catch {
+      setQ(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [householdId]);
+
+  useEffect(() => {
+    fetchLatest();
+  }, [fetchLatest]);
+
+  async function handleSend() {
+    const clientPhone = getClientPhone(household);
+    if (!clientPhone) {
+      alert(PHONE_ERROR);
+      return;
+    }
+    const phone = normalizePhone(clientPhone);
+    if (!phone) {
+      alert(PHONE_ERROR);
+      return;
+    }
+    setSending(true);
+    try {
+      const res = await fetch("/api/questionnaire/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ householdId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        console.error("Send questionnaire API error:", { status: res.status, data });
+        alert(`שגיאה בשליחת השאלון: ${data?.error ?? res.status}`);
+        return;
+      }
+      const token = data?.token;
+      if (!token) {
+        console.error("Send questionnaire: no token in response", data);
+        alert("שגיאה: לא התקבל קישור לשאלון");
+        return;
+      }
+      const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+      const link = `${baseUrl}/questionnaire/${token}`;
+      const message = `שלום,
+מצורף שאלון לבדיקת החזר מס:
+
+${link}`;
+      const encodedMessage = encodeURIComponent(message);
+      window.open(`https://wa.me/${phone}?text=${encodedMessage}`, "_blank");
+      await fetchLatest();
+    } catch (error) {
+      console.error("Send questionnaire error:", error);
+      alert("שגיאה בשליחת השאלון. בדוק קונסול.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleSaveEdit() {
+    if (!q) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/questionnaire/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: q.id, answers: editAnswers }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data?.error ?? "שגיאה בשמירה");
+        return;
+      }
+      await fetchLatest();
+      setEditing(false);
+    } catch (error) {
+      console.error("Update questionnaire error:", error);
+      alert("שגיאה בשמירה");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const answers = editing ? editAnswers : (q?.answers ?? {});
+  const isReadOnly = q?.dateReceived != null && !editing;
+
+  if (loading) {
+    return (
+      <div className="card p-8 text-center text-ink-500" dir="rtl">
+        טוען...
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-6 flex-wrap lg:flex-nowrap" dir="rtl">
+      {/* RIGHT — questionnaire (~70%) */}
+      <div className="flex-1 min-w-0 order-2 lg:order-1">
+        <div className="card p-6 overflow-y-auto max-h-[calc(100vh-12rem)]">
+          <div className="flex flex-wrap gap-3 mb-6">
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={sending || !getClientPhone(household) || !normalizePhone(getClientPhone(household) ?? "")}
+              className="btn btn-primary flex items-center gap-2"
+            >
+              <MessageCircle className="h-4 w-4" />
+              {sending ? "שולח…" : "שלח"}
+            </button>
+            {q && isReadOnly && (
+              <button type="button" onClick={() => setEditing(true)} className="btn btn-ghost flex items-center gap-2">
+                <Pencil className="h-4 w-4" />
+                ערוך
+              </button>
+            )}
+            {editing && (
+              <>
+                <button type="button" onClick={handleSaveEdit} disabled={saving} className="btn btn-primary">
+                  {saving ? "שומר…" : "שמור"}
+                </button>
+                <button type="button" onClick={() => { setEditing(false); setEditAnswers(q?.answers ?? {}); }} className="btn btn-ghost">
+                  ביטול
+                </button>
+              </>
+            )}
+          </div>
+
+          <h3 className="font-semibold text-ink-800 mb-4">שאלון החזר מס</h3>
+
+          {/* Identification — not numbered */}
+          <div className="space-y-4 pb-6 border-b border-ink-200 mb-6">
+            {ID_FIELDS.map((f) => (
+              <div key={f.key} className="space-y-1.5">
+                <label className="block font-medium text-ink-700">{f.label}</label>
+                {f.sublabel && <span className="block text-xs text-ink-500">{f.sublabel}</span>}
+                {f.type === "text" && (
+                  <input
+                    type="text"
+                    value={answers[f.key] ?? ""}
+                    onChange={(e) => editing && setEditAnswers((p) => ({ ...p, [f.key]: e.target.value }))}
+                    readOnly={!editing}
+                    className="input w-full"
+                  />
+                )}
+                {f.type === "date" && (
+                  <input
+                    type="date"
+                    value={answers[f.key] ?? ""}
+                    onChange={(e) => editing && setEditAnswers((p) => ({ ...p, [f.key]: e.target.value }))}
+                    readOnly={!editing}
+                    className="input w-full"
+                  />
+                )}
+                {f.type === "gender" && (
+                  <div className="flex flex-wrap gap-4">
+                    {GENDER_OPTIONS.map((opt) => (
+                      <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name={f.key}
+                          value={opt}
+                          checked={answers[f.key] === opt}
+                          onChange={() => editing && setEditAnswers((p) => ({ ...p, [f.key]: opt }))}
+                          disabled={!editing}
+                        />
+                        <span>{opt}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {f.type === "marital" && (
+                  <div className="flex flex-wrap gap-4">
+                    {MARITAL_OPTIONS.map((opt) => (
+                      <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name={f.key}
+                          value={opt}
+                          checked={answers[f.key] === opt}
+                          onChange={() => editing && setEditAnswers((p) => ({ ...p, [f.key]: opt }))}
+                          disabled={!editing}
+                        />
+                        <span>{opt}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Questions 1–16 — numbered */}
+          {Array.from({ length: NUM_QUESTIONS }, (_, i) => i + 1).map((qn) => (
+            <div key={qn} className="space-y-2 pb-4 border-b border-ink-100 last:border-0 mb-4 last:mb-0">
+              <label className="block font-medium text-ink-700">{qn}. האם אתה או בן/בת זוגך...</label>
+              <div className="flex flex-wrap gap-4">
+                {OPTIONS.map((opt) => (
+                  <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`q${qn}`}
+                      value={opt}
+                      checked={answers[`q${qn}`] === opt}
+                      onChange={() => editing && setEditAnswers((p) => ({ ...p, [`q${qn}`]: opt }))}
+                      disabled={!editing}
+                    />
+                    <span>{opt}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* LEFT — summary panel (~30%) */}
+      <div className="w-full lg:w-[30%] min-w-0 order-1 lg:order-2">
+        <div className="card p-6">
+          <h3 className="font-semibold text-ink-900 mb-4">סיכום</h3>
+          <dl className="space-y-4 text-sm">
+            <div>
+              <dt className="text-ink-500">תאריך שליחה</dt>
+              <dd className="font-medium text-ink-800 mt-0.5">{q?.dateSent ? formatDate(q.dateSent) : "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-ink-500">תאריך קבלה</dt>
+              <dd className="font-medium text-ink-800 mt-0.5">{q?.dateReceived ? formatDate(q.dateReceived) : "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-ink-500">מגיע / לא מגיע החזר</dt>
+              <dd className="font-semibold text-ink-900 mt-0.5">{q?.result ?? "—"}</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,321 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             Int                      @id @default(autoincrement())
+  email          String                   @unique
+  passwordHash   String                   @map("password_hash")
+  name           String?
+  isAdmin        Boolean                  @default(false) @map("is_admin")
+  role           String                   @default("clerk")
+  createdAt      DateTime                 @default(now()) @map("created_at")
+  importantDates HouseholdImportantDate[]
+}
+
+model TblAgent {
+  agentId    Int         @id @default(autoincrement()) @map("agent_id")
+  name       String?
+  contact    String?
+  mobile     String?
+  email      String?
+  address    String?
+  city       String?
+  phone      String?
+  fax        String?
+  cp         Float?
+  cp2        Float?
+  households Household[]
+  clients    TblClient[]
+}
+
+model TblClerk {
+  clerkId    Int         @id @default(autoincrement()) @map("clerk_id")
+  name       String?
+  contact    String?
+  mobile     String?
+  email      String?
+  address    String?
+  phone      String?
+  fax        String?
+  squad      Int?
+  households Household[]
+  clients    TblClient[]
+}
+
+model TblDocument {
+  documentId    Int                 @id @default(autoincrement()) @map("document_id")
+  documentName  String?             @map("document_name")
+  documentAuto  Boolean?            @default(false) @map("document_auto")
+  householdDocs HouseholdDocument[]
+  taxCaseDocs   TaxCaseDocument[]
+  docClients    TblDocClient[]
+}
+
+model CaseStatus {
+  id         Int       @id @default(autoincrement())
+  statusName String?   @map("status_name")
+  color      String?
+  taxCases   TaxCase[]
+}
+
+model Household {
+  id                      Int                      @id @default(autoincrement())
+  createdAt               DateTime                 @default(now()) @map("created_at")
+  agentId                 Int?                     @map("agent_id")
+  clerkId                 Int?                     @map("clerk_id")
+  generalStatus           String?                  @map("general_status")
+  address                 String?
+  city                    String?
+  notes                   String?
+  internalId              String?                  @map("internal_id")
+  cp                      Float?
+  cp2                     Float?
+  houseNumber             String?                  @map("house_number")
+  street                  String?
+  generatedDocuments      GeneratedDocument[]
+  clerk                   TblClerk?                @relation(fields: [clerkId], references: [clerkId])
+  agent                   TblAgent?                @relation(fields: [agentId], references: [agentId])
+  activities              HouseholdActivity[]
+  children                HouseholdChild[]
+  documents               HouseholdDocument[]
+  fileDocuments           HouseholdFileDocument[]
+  importantDates          HouseholdImportantDate[]
+  persons                 Person[]
+  taxCases                TaxCase[]
+  taxRefundQuestionnaires TaxRefundQuestionnaire[]
+}
+
+model TaxRefundQuestionnaire {
+  id           Int       @id @default(autoincrement())
+  householdId  Int       @map("household_id")
+  token        String    @unique
+  dateSent     DateTime  @map("date_sent")
+  dateReceived DateTime? @map("date_received")
+  answers      String?   @map("answers")
+  result       String?   @map("result")
+  household    Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}
+
+model HouseholdActivity {
+  id          Int       @id @default(autoincrement())
+  householdId Int       @map("household_id")
+  action      String    @map("action")
+  description String?   @map("description")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}
+
+model HouseholdImportantDate {
+  id          Int       @id @default(autoincrement())
+  householdId Int       @map("household_id")
+  date        DateTime  @map("date")
+  performerId Int?      @map("performer_id")
+  subject     String?   @map("subject")
+  details     String?   @map("details")
+  performer   User?     @relation(fields: [performerId], references: [id])
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}
+
+model Person {
+  id               Int       @id @default(autoincrement())
+  householdId      Int       @map("household_id")
+  role             String?
+  firstName        String?   @map("first_name")
+  lastName         String?   @map("last_name")
+  idNumber         String?   @map("id_number")
+  birthDate        DateTime? @map("birth_date")
+  gender           String?
+  phone            String?
+  email            String?
+  representativeId Int?      @map("representative_id")
+  flags            String?
+  household        Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}
+
+model TaxCase {
+  id             Int               @id @default(autoincrement())
+  householdId    Int               @map("household_id")
+  taxYear        Int               @map("tax_year")
+  caseStatusId   Int?              @map("case_status_id")
+  dateSubmission DateTime?         @map("date_submission")
+  amountRefund   Float?            @map("amount_refund")
+  dateRefund     DateTime?         @map("date_refund")
+  notes          String?
+  createdAt      DateTime          @default(now()) @map("date_created")
+  status         CaseStatus?       @relation(fields: [caseStatusId], references: [id])
+  household      Household         @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  documents      TaxCaseDocument[]
+}
+
+model TaxCaseDocument {
+  id           Int         @id @default(autoincrement())
+  taxCaseId    Int         @map("tax_case_id")
+  documentId   Int         @map("document_id")
+  isAccepted   Boolean?    @default(false) @map("is_accepted")
+  dateAccepted DateTime?   @map("date_accepted")
+  pathDoc      String?     @map("path_doc")
+  notes        String?
+  document     TblDocument @relation(fields: [documentId], references: [documentId], onDelete: Cascade)
+  taxCase      TaxCase     @relation(fields: [taxCaseId], references: [id], onDelete: Cascade)
+}
+
+model HouseholdDocument {
+  id           Int         @id @default(autoincrement())
+  householdId  Int         @map("household_id")
+  documentId   Int         @map("document_id")
+  isAccepted   Boolean?    @default(false) @map("is_accepted")
+  dateAccepted DateTime?   @map("date_accepted")
+  pathDoc      String?     @map("path_doc")
+  notes        String?
+  document     TblDocument @relation(fields: [documentId], references: [documentId], onDelete: Cascade)
+  household    Household   @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}
+
+model HouseholdFileDocument {
+  id                Int       @id @default(autoincrement())
+  householdId       Int       @map("household_id")
+  customName        String?   @map("custom_name")
+  fileName          String?   @map("file_name")
+  filePath          String?   @map("file_path")
+  documentCreatedAt DateTime? @map("document_created_at")
+  uploadedAt        DateTime  @default(now()) @map("uploaded_at")
+  notes             String?   @map("notes")
+  household         Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}
+
+model HouseholdChild {
+  id          Int       @id @default(autoincrement())
+  householdId Int       @map("household_id")
+  childName   String?   @map("child_name")
+  birthDay    DateTime? @map("birth_day")
+  idNumber    String?   @map("id_number")
+  gender      String?
+  custodyOf   String?   @map("custody_of")
+  fatherName  String?   @map("father_name")
+  firstName   String?   @map("first_name")
+  hasAdhd     Boolean?  @default(false) @map("has_adhd")
+  isDisabled  Boolean?  @default(false) @map("is_disabled")
+  lastName    String?   @map("last_name")
+  motherName  String?   @map("mother_name")
+  phone       String?
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}
+
+model TblStatus {
+  statusId   Int         @id @default(autoincrement()) @map("status_id")
+  statusName String?     @map("status_name")
+  refunds    TblRefund[]
+}
+
+model TblProcess {
+  processId   Int            @id @default(autoincrement()) @map("process_id")
+  processName String?        @map("process_name")
+  processAuto Boolean?       @default(false) @map("process_auto")
+  processKind Int?           @map("process_kind")
+  refundSubs  TblRefundSub[]
+}
+
+model TblClient {
+  clientId      Int            @id @default(autoincrement()) @map("client_id")
+  clientName    String?        @map("client_name")
+  lastName      String?        @map("last_name")
+  tz            String?
+  birthDay      DateTime?      @map("birth_day")
+  mobile        String?
+  maritalStatus String?        @map("marital_status")
+  migdar        String?
+  dateUp        DateTime?      @map("date_up")
+  clientNameSub String?        @map("client_name_sub")
+  tzSub         String?        @map("tz_sub")
+  birthDaySub   DateTime?      @map("birth_day_sub")
+  mobileSub     String?        @map("mobile_sub")
+  migdarSub     String?        @map("migdar_sub")
+  address       String?
+  city          String?
+  addressPost   String?        @map("address_post")
+  phoneHome     String?        @map("phone_home")
+  phoneWork     String?        @map("phone_work")
+  email         String?
+  notes         String?
+  clerkId       Int?           @map("clerk_id")
+  squad         Int?
+  agentId       Int?           @map("agent_id")
+  cp            Float?
+  cp2           Float?
+  userName      String?        @map("user_name")
+  lastUpdate    DateTime?      @map("last_update")
+  dateCreated   DateTime?      @default(now()) @map("date_created")
+  dateUpSub     DateTime?      @map("date_up_sub")
+  clientIdOld   Int?           @map("client_id_old")
+  childs        TblChild[]
+  agent         TblAgent?      @relation(fields: [agentId], references: [agentId])
+  clerk         TblClerk?      @relation(fields: [clerkId], references: [clerkId])
+  docClients    TblDocClient[]
+  refunds       TblRefund[]
+}
+
+model GeneratedDocument {
+  id           Int        @id @default(autoincrement())
+  householdId  Int?       @map("household_id")
+  templateType String?    @map("template_type")
+  fieldsData   String?    @map("fields_data")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  household    Household? @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}
+
+model TblChild {
+  childId   Int       @id @default(autoincrement()) @map("child_id")
+  clientId  Int       @map("client_id")
+  childName String?   @map("child_name")
+  birthDay  DateTime? @map("birth_day")
+  tz        String?
+  migdar    String?
+  client    TblClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+}
+
+model TblDocClient {
+  recId        Int         @id @default(autoincrement()) @map("rec_id")
+  documentId   Int         @map("document_id")
+  clientId     Int         @map("client_id")
+  isAccepted   Boolean?    @default(false) @map("is_accepted")
+  dateAccepted DateTime?   @map("date_accepted")
+  pathDoc      String?     @map("path_doc")
+  notes        String?
+  client       TblClient   @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  document     TblDocument @relation(fields: [documentId], references: [documentId], onDelete: Cascade)
+}
+
+model TblRefund {
+  refundId       Int            @id @default(autoincrement()) @map("refund_id")
+  clientId       Int            @map("client_id")
+  yearId         Int            @map("year_id")
+  dateSubmission DateTime?      @map("date_submission")
+  amountRefund   Float?         @map("amount_refund")
+  dateRefund     DateTime?      @map("date_refund")
+  statusId       Int?           @map("status_id")
+  notes          String?
+  userName       String?        @map("user_name")
+  lastUpdate     DateTime?      @map("last_update")
+  dateCreated    DateTime?      @default(now()) @map("date_created")
+  paymentStatus  Boolean?       @map("payment_status")
+  status         TblStatus?     @relation(fields: [statusId], references: [statusId])
+  client         TblClient      @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  refundSubs     TblRefundSub[]
+}
+
+model TblRefundSub {
+  recId     Int        @id @default(autoincrement()) @map("rec_id")
+  refundId  Int        @map("refund_id")
+  processId Int        @map("process_id")
+  isValid   Boolean?   @default(true) @map("is_valid")
+  dateToDo  DateTime?  @map("date_to_do")
+  notes     String?
+  process   TblProcess @relation(fields: [processId], references: [processId])
+  refund    TblRefund  @relation(fields: [refundId], references: [refundId], onDelete: Cascade)
+}

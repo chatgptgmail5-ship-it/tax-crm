@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --ink: #0f172a;
+  --ink-muted: #64748b;
+  --primary: #0369a1;
+  --primary-hover: #0284c7;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  text-align: right;
+}
+
+/* Print: only elements marked .print-root (and their contents) are visible. */
+@media print {
+  html,
+  body {
+    height: auto !important;
+    background: #fff !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-root,
+  .print-root * {
+    visibility: visible !important;
+  }
+  .print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: 100%;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors;
+  }
+  .btn-primary {
+    @apply bg-primary-600 text-white shadow-sm transition-colors hover:bg-primary-700 hover:shadow;
+  }
+  .btn-secondary {
+    @apply bg-ink-100 text-ink-800 hover:bg-ink-200;
+  }
+  .btn-ghost {
+    @apply hover:bg-primary-50;
+  }
+  .card {
+    @apply rounded-xl border border-ink-200 bg-white shadow-sm transition-shadow;
+  }
+  .card-hover:hover {
+    @apply border-primary-200/60 shadow-md;
+  }
+  .input {
+    @apply w-full rounded-lg border border-ink-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500;
+  }
+  .label {
+    @apply text-sm font-medium text-ink-700;
+  }
+}

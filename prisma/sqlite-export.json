@@ -1,0 +1,744 @@
+{
+  "user": [
+    {
+      "id": 1,
+      "email": "eli@perets.tax",
+      "passwordHash": "$2a$12$TKBIe9bASC2N6Y5F9odp5.LQ5YvAheEIvWfgg3A8mW5tEXFR2YQtW",
+      "name": "Eperets",
+      "isAdmin": true,
+      "role": "admin",
+      "createdAt": "2026-03-08T14:18:39.791Z"
+    },
+    {
+      "id": 2,
+      "email": "ilayperets@gmail.com",
+      "passwordHash": "$2a$12$/fecP8YVomDc5w73q3eTEOMvk5oxSY4BGzwACb6gb77nIsqUPmT.G",
+      "name": "ilay",
+      "isAdmin": false,
+      "role": "clerk",
+      "createdAt": "2026-03-09T22:58:22.164Z"
+    }
+  ],
+  "tblAgent": [
+    {
+      "agentId": 1,
+      "name": "איילון",
+      "contact": null,
+      "mobile": null,
+      "email": null,
+      "address": null,
+      "city": null,
+      "phone": null,
+      "fax": null,
+      "cp": 0,
+      "cp2": 17
+    },
+    {
+      "agentId": 4,
+      "name": "משרד",
+      "contact": null,
+      "mobile": null,
+      "email": null,
+      "address": null,
+      "city": null,
+      "phone": null,
+      "fax": null,
+      "cp": 472,
+      "cp2": 20
+    },
+    {
+      "agentId": 5,
+      "name": "תמורה",
+      "contact": null,
+      "mobile": null,
+      "email": null,
+      "address": null,
+      "city": null,
+      "phone": null,
+      "fax": null,
+      "cp": 0,
+      "cp2": 15
+    },
+    {
+      "agentId": 6,
+      "name": "ליבת/אלי",
+      "contact": null,
+      "mobile": null,
+      "email": null,
+      "address": null,
+      "city": null,
+      "phone": null,
+      "fax": null,
+      "cp": 253,
+      "cp2": 17
+    },
+    {
+      "agentId": 7,
+      "name": "קק\"ל",
+      "contact": null,
+      "mobile": null,
+      "email": null,
+      "address": null,
+      "city": null,
+      "phone": null,
+      "fax": null,
+      "cp": 0,
+      "cp2": 17
+    },
+    {
+      "agentId": 8,
+      "name": "מיטב ד\"ש",
+      "contact": null,
+      "mobile": null,
+      "email": null,
+      "address": null,
+      "city": null,
+      "phone": null,
+      "fax": null,
+      "cp": 117,
+      "cp2": 20
+    },
+    {
+      "agentId": 9,
+      "name": "איוויב",
+      "contact": null,
+      "mobile": null,
+      "email": null,
+      "address": null,
+      "city": null,
+      "phone": null,
+      "fax": null,
+      "cp": 0,
+      "cp2": 15
+    },
+    {
+      "agentId": 10,
+      "name": "איתנים",
+      "contact": null,
+      "mobile": null,
+      "email": null,
+      "address": null,
+      "city": null,
+      "phone": null,
+      "fax": null,
+      "cp": 350,
+      "cp2": 20
+    }
+  ],
+  "tblClerk": [
+    {
+      "clerkId": 1,
+      "name": "רחובות",
+      "contact": null,
+      "mobile": null,
+      "email": null,
+      "address": null,
+      "phone": null,
+      "fax": null,
+      "squad": null
+    }
+  ],
+  "tblDocument": [
+    {
+      "documentId": 1,
+      "documentName": "ID Card",
+      "documentAuto": false
+    },
+    {
+      "documentId": 2,
+      "documentName": "Tax Return",
+      "documentAuto": false
+    },
+    {
+      "documentId": 3,
+      "documentName": "Bank Statement",
+      "documentAuto": false
+    },
+    {
+      "documentId": 4,
+      "documentName": "Income Declaration",
+      "documentAuto": false
+    }
+  ],
+  "caseStatus": [
+    {
+      "id": 1,
+      "statusName": "חדש",
+      "color": "slate"
+    },
+    {
+      "id": 2,
+      "statusName": "חסרים מסמכים",
+      "color": "amber"
+    },
+    {
+      "id": 3,
+      "statusName": "בבדיקה",
+      "color": "blue"
+    },
+    {
+      "id": 4,
+      "statusName": "מוכן להגשה",
+      "color": "cyan"
+    },
+    {
+      "id": 5,
+      "statusName": "הוגש למס הכנסה",
+      "color": "violet"
+    },
+    {
+      "id": 6,
+      "statusName": "הסתיים",
+      "color": "green"
+    },
+    {
+      "id": 7,
+      "statusName": "בוטל",
+      "color": "red"
+    }
+  ],
+  "household": [
+    {
+      "id": 1,
+      "createdAt": "2026-03-08T16:05:49.062Z",
+      "agentId": 1,
+      "clerkId": 1,
+      "generalStatus": "ממתין",
+      "address": "שלום צעידי 16",
+      "city": "רחובות",
+      "notes": "סוס ועגלה",
+      "internalId": null,
+      "cp": 0,
+      "cp2": 17,
+      "houseNumber": null,
+      "street": null
+    }
+  ],
+  "taxRefundQuestionnaire": [
+    {
+      "id": 1,
+      "householdId": 1,
+      "token": "7c23898a-d1eb-412c-93e9-a573f80694bf",
+      "dateSent": "2026-03-22T22:24:37.864Z",
+      "dateReceived": null,
+      "answers": null,
+      "result": null
+    },
+    {
+      "id": 2,
+      "householdId": 1,
+      "token": "d8cd146a-5162-4a75-b3b6-2721dab68389",
+      "dateSent": "2026-03-22T22:25:36.797Z",
+      "dateReceived": null,
+      "answers": null,
+      "result": null
+    }
+  ],
+  "householdActivity": [
+    {
+      "id": 1,
+      "householdId": 1,
+      "action": "document_uploaded",
+      "description": "הועלה מסמך: שאלון שכיר",
+      "createdAt": "2026-03-10T21:05:10.415Z"
+    },
+    {
+      "id": 2,
+      "householdId": 1,
+      "action": "document_uploaded",
+      "description": "הועלה מסמך: הסכם שכר טרחה",
+      "createdAt": "2026-03-10T21:10:53.190Z"
+    },
+    {
+      "id": 3,
+      "householdId": 1,
+      "action": "document_deleted",
+      "description": "נמחק מסמך: שאלון שכיר",
+      "createdAt": "2026-03-10T21:11:05.155Z"
+    },
+    {
+      "id": 4,
+      "householdId": 1,
+      "action": "document_uploaded",
+      "description": "הועלה מסמך: טופס 867 – ניירות ערך / פיקדונות",
+      "createdAt": "2026-03-14T17:04:11.628Z"
+    },
+    {
+      "id": 5,
+      "householdId": 1,
+      "action": "status_changed",
+      "description": "שונה סטטוס",
+      "createdAt": "2026-03-14T18:59:15.300Z"
+    },
+    {
+      "id": 6,
+      "householdId": 1,
+      "action": "status_changed",
+      "description": "שונה סטטוס",
+      "createdAt": "2026-03-14T19:40:46.209Z"
+    },
+    {
+      "id": 7,
+      "householdId": 1,
+      "action": "status_changed",
+      "description": "שונה סטטוס",
+      "createdAt": "2026-03-14T19:40:49.818Z"
+    },
+    {
+      "id": 8,
+      "householdId": 1,
+      "action": "client_updated",
+      "description": "עודכנו פרטי לקוח",
+      "createdAt": "2026-03-14T20:30:38.275Z"
+    },
+    {
+      "id": 9,
+      "householdId": 1,
+      "action": "status_changed",
+      "description": "שונה סטטוס",
+      "createdAt": "2026-03-14T20:31:04.670Z"
+    },
+    {
+      "id": 10,
+      "householdId": 1,
+      "action": "status_changed",
+      "description": "שונה סטטוס",
+      "createdAt": "2026-03-14T20:31:30.964Z"
+    },
+    {
+      "id": 11,
+      "householdId": 1,
+      "action": "status_changed",
+      "description": "שונה סטטוס",
+      "createdAt": "2026-03-14T20:32:01.430Z"
+    },
+    {
+      "id": 12,
+      "householdId": 1,
+      "action": "client_updated",
+      "description": "עודכנו פרטי לקוח",
+      "createdAt": "2026-03-15T18:40:04.263Z"
+    },
+    {
+      "id": 13,
+      "householdId": 1,
+      "action": "client_updated",
+      "description": "עודכנו פרטי לקוח",
+      "createdAt": "2026-03-15T18:42:50.779Z"
+    },
+    {
+      "id": 14,
+      "householdId": 1,
+      "action": "child_added",
+      "description": "נוסף ילד: איתי ישראלי",
+      "createdAt": "2026-03-15T18:44:42.299Z"
+    },
+    {
+      "id": 15,
+      "householdId": 1,
+      "action": "child_added",
+      "description": "נוסף ילד: נועה ישראלי",
+      "createdAt": "2026-03-15T18:45:52.116Z"
+    },
+    {
+      "id": 16,
+      "householdId": 1,
+      "action": "child_added",
+      "description": "נוסף ילד: ילד",
+      "createdAt": "2026-03-15T20:27:23.284Z"
+    },
+    {
+      "id": 17,
+      "householdId": 1,
+      "action": "child_updated",
+      "description": "עודכן ילד: איתי ישראלי",
+      "createdAt": "2026-03-15T20:28:13.890Z"
+    },
+    {
+      "id": 18,
+      "householdId": 1,
+      "action": "child_updated",
+      "description": "עודכן ילד: נועה ישראלי",
+      "createdAt": "2026-03-15T20:28:32.468Z"
+    },
+    {
+      "id": 19,
+      "householdId": 1,
+      "action": "status_changed",
+      "description": "שונה סטטוס",
+      "createdAt": "2026-03-17T19:01:09.356Z"
+    },
+    {
+      "id": 20,
+      "householdId": 1,
+      "action": "status_changed",
+      "description": "שונה סטטוס",
+      "createdAt": "2026-03-17T19:02:01.121Z"
+    },
+    {
+      "id": 21,
+      "householdId": 1,
+      "action": "status_changed",
+      "description": "שונה סטטוס",
+      "createdAt": "2026-03-17T19:02:02.838Z"
+    },
+    {
+      "id": 22,
+      "householdId": 1,
+      "action": "status_changed",
+      "description": "שונה סטטוס",
+      "createdAt": "2026-03-21T01:10:41.971Z"
+    },
+    {
+      "id": 23,
+      "householdId": 1,
+      "action": "document_uploaded",
+      "description": "הועלה מסמך: תעודת זהות וספח – בן הזוג הרשום",
+      "createdAt": "2026-03-21T01:11:41.239Z"
+    },
+    {
+      "id": 24,
+      "householdId": 1,
+      "action": "document_uploaded",
+      "description": "הועלה מסמך: שונות",
+      "createdAt": "2026-03-21T01:11:57.935Z"
+    },
+    {
+      "id": 25,
+      "householdId": 1,
+      "action": "client_updated",
+      "description": "עודכנו פרטי לקוח",
+      "createdAt": "2026-03-22T15:22:03.225Z"
+    },
+    {
+      "id": 26,
+      "householdId": 1,
+      "action": "client_updated",
+      "description": "עודכנו פרטי לקוח",
+      "createdAt": "2026-03-22T22:25:33.392Z"
+    }
+  ],
+  "householdImportantDate": [
+    {
+      "id": 2,
+      "householdId": 1,
+      "date": "2026-03-15T00:00:00.000Z",
+      "performerId": 1,
+      "subject": "ניסיון בדיקה אחד",
+      "details": "פה אני הולך לכתוב עכשיו סתם טקסט כלשהו בשביל לראות אם התוכנה עובדת כמו שצריך אז עכשיו אני אכתוב עוד כמה מילים לדוגמה אחת שתיים שלוש ארבע חמש שש שבע שמונה תשע עשר ואני יכול להמשיך לכתוב סתם דברים כי זה לא רלוונטי מה אני באמת כותב פה זה סתם בשביל שיהיה פה הרבה טקסט רגע..."
+    }
+  ],
+  "person": [
+    {
+      "id": 1,
+      "householdId": 1,
+      "role": "husband",
+      "firstName": "דוד",
+      "lastName": "ישראלי",
+      "idNumber": "012345678",
+      "birthDate": "2000-01-01T00:00:00.000Z",
+      "gender": "זכר",
+      "phone": "0543922661",
+      "email": "ilayperets@gmail.com",
+      "representativeId": null,
+      "flags": "{\"ypSeum\":null,\"ypBituahLeumi\":null,\"issueDate\":null,\"licenseNumber\":null,\"maritalStatus\":\"נשוי/ה\"}"
+    },
+    {
+      "id": 2,
+      "householdId": 1,
+      "role": "wife",
+      "firstName": "גילה",
+      "lastName": "ישראלי",
+      "idNumber": "054123698",
+      "birthDate": "2000-03-03T00:00:00.000Z",
+      "gender": null,
+      "phone": null,
+      "email": null,
+      "representativeId": null,
+      "flags": null
+    },
+    {
+      "id": 3,
+      "householdId": 1,
+      "role": "wife",
+      "firstName": "גילה",
+      "lastName": "שאולוב",
+      "idNumber": "054123698",
+      "birthDate": "2000-03-03T00:00:00.000Z",
+      "gender": "נקבה",
+      "phone": "025412365",
+      "email": "ilayperets@gmail.com",
+      "representativeId": null,
+      "flags": null
+    }
+  ],
+  "taxCase": [
+    {
+      "id": 1,
+      "householdId": 1,
+      "taxYear": 2026,
+      "caseStatusId": null,
+      "dateSubmission": null,
+      "amountRefund": null,
+      "dateRefund": null,
+      "notes": null,
+      "createdAt": "2026-03-10T21:04:49.146Z"
+    },
+    {
+      "id": 2,
+      "householdId": 1,
+      "taxYear": 2026,
+      "caseStatusId": 1,
+      "dateSubmission": null,
+      "amountRefund": null,
+      "dateRefund": null,
+      "notes": null,
+      "createdAt": "2026-03-10T21:08:31.967Z"
+    }
+  ],
+  "taxCaseDocument": [],
+  "householdDocument": [],
+  "householdFileDocument": [
+    {
+      "id": 1,
+      "householdId": 1,
+      "customName": "רישיון רכב",
+      "fileName": "רישיון רכב.pdf",
+      "filePath": "households/1/1772989239599-__________.pdf",
+      "documentCreatedAt": "2026-03-04T00:00:00.000Z",
+      "uploadedAt": "2026-03-08T17:00:39.603Z",
+      "notes": null
+    },
+    {
+      "id": 2,
+      "householdId": 1,
+      "customName": "שונות",
+      "fileName": "תלוש.pdf",
+      "filePath": "households/1/1773074541485-____.pdf",
+      "documentCreatedAt": "2026-03-09T00:00:00.000Z",
+      "uploadedAt": "2026-03-09T16:42:21.489Z",
+      "notes": null
+    },
+    {
+      "id": 4,
+      "householdId": 1,
+      "customName": "הסכם שכר טרחה",
+      "fileName": "הסכם שכר טרחה.pdf",
+      "filePath": "households/1/1773177053162-_____________.pdf",
+      "documentCreatedAt": "2026-02-11T00:00:00.000Z",
+      "uploadedAt": "2026-03-10T21:10:53.164Z",
+      "notes": null
+    },
+    {
+      "id": 5,
+      "householdId": 1,
+      "customName": "טופס 867 – ניירות ערך / פיקדונות",
+      "fileName": "אישור תשלום.pdf",
+      "filePath": "households/1/1773507851608-___________.pdf",
+      "documentCreatedAt": "2026-03-10T00:00:00.000Z",
+      "uploadedAt": "2026-03-14T17:04:11.614Z",
+      "notes": null
+    },
+    {
+      "id": 6,
+      "householdId": 1,
+      "customName": "תעודת זהות וספח – בן הזוג הרשום",
+      "fileName": "הסכם שכיר.doc",
+      "filePath": "households/1/1774055501214-_________.doc",
+      "documentCreatedAt": "2026-03-16T00:00:00.000Z",
+      "uploadedAt": "2026-03-21T01:11:41.227Z",
+      "notes": null
+    },
+    {
+      "id": 7,
+      "householdId": 1,
+      "customName": "שונות",
+      "fileName": "אישור ניכוי מס במקור.pdf",
+      "filePath": "households/1/1774055517922-____________________.pdf",
+      "documentCreatedAt": "2026-03-19T00:00:00.000Z",
+      "uploadedAt": "2026-03-21T01:11:57.923Z",
+      "notes": null
+    }
+  ],
+  "householdChild": [
+    {
+      "id": 1,
+      "householdId": 1,
+      "childName": null,
+      "birthDay": "2015-01-01T00:00:00.000Z",
+      "idNumber": "012456789",
+      "gender": "זכר",
+      "custodyOf": "",
+      "fatherName": "דוד ישראלי",
+      "firstName": "איתי",
+      "hasAdhd": false,
+      "isDisabled": false,
+      "lastName": "ישראלי",
+      "motherName": "גילה ישראלי",
+      "phone": "0525869939"
+    },
+    {
+      "id": 2,
+      "householdId": 1,
+      "childName": null,
+      "birthDay": "2018-05-06T00:00:00.000Z",
+      "idNumber": "123456789",
+      "gender": "נקבה",
+      "custodyOf": "",
+      "fatherName": "דוד ישראלי",
+      "firstName": "נועה",
+      "hasAdhd": false,
+      "isDisabled": false,
+      "lastName": "ישראלי",
+      "motherName": "גילה ישראלי",
+      "phone": "0525869939"
+    }
+  ],
+  "tblStatus": [
+    {
+      "statusId": 1,
+      "statusName": "Pending"
+    },
+    {
+      "statusId": 2,
+      "statusName": "Submitted"
+    },
+    {
+      "statusId": 3,
+      "statusName": "Approved"
+    },
+    {
+      "statusId": 4,
+      "statusName": "Paid"
+    },
+    {
+      "statusId": 5,
+      "statusName": "Rejected"
+    },
+    {
+      "statusId": 6,
+      "statusName": "ממתין לחתימת הלקוח על הדוח"
+    },
+    {
+      "statusId": 7,
+      "statusName": "קיים חוב בשנה זו"
+    }
+  ],
+  "tblProcess": [
+    {
+      "processId": 1,
+      "processName": "Initial Review",
+      "processAuto": false,
+      "processKind": null
+    },
+    {
+      "processId": 2,
+      "processName": "Document Collection",
+      "processAuto": false,
+      "processKind": null
+    },
+    {
+      "processId": 3,
+      "processName": "Submission",
+      "processAuto": false,
+      "processKind": null
+    },
+    {
+      "processId": 4,
+      "processName": "Follow-up",
+      "processAuto": false,
+      "processKind": null
+    }
+  ],
+  "tblClient": [
+    {
+      "clientId": 1,
+      "clientName": "דוד",
+      "lastName": "ישראל",
+      "tz": "012345678",
+      "birthDay": "2000-01-01T00:00:00.000Z",
+      "mobile": "0525869939",
+      "maritalStatus": null,
+      "migdar": null,
+      "dateUp": null,
+      "clientNameSub": null,
+      "tzSub": null,
+      "birthDaySub": null,
+      "mobileSub": null,
+      "migdarSub": null,
+      "address": null,
+      "city": null,
+      "addressPost": null,
+      "phoneHome": null,
+      "phoneWork": null,
+      "email": "ilayperets@gmail.com",
+      "notes": null,
+      "clerkId": null,
+      "squad": null,
+      "agentId": null,
+      "cp": null,
+      "cp2": null,
+      "userName": null,
+      "lastUpdate": null,
+      "dateCreated": "2026-03-08T14:38:03.716Z",
+      "dateUpSub": null,
+      "clientIdOld": null
+    }
+  ],
+  "generatedDocument": [
+    {
+      "id": 25,
+      "householdId": 1,
+      "templateType": "client_refund_report",
+      "fieldsData": "{}",
+      "createdAt": "2026-03-22T14:22:56.702Z"
+    },
+    {
+      "id": 26,
+      "householdId": 1,
+      "templateType": "client_refund_report",
+      "fieldsData": "{}",
+      "createdAt": "2026-03-22T14:33:49.174Z"
+    },
+    {
+      "id": 27,
+      "householdId": 1,
+      "templateType": "client_refund_report",
+      "fieldsData": "{}",
+      "createdAt": "2026-03-22T14:43:24.015Z"
+    },
+    {
+      "id": 28,
+      "householdId": 1,
+      "templateType": "employee_agreement",
+      "fieldsData": "{}",
+      "createdAt": "2026-03-22T14:43:52.465Z"
+    },
+    {
+      "id": 29,
+      "householdId": 1,
+      "templateType": "employee_agreement",
+      "fieldsData": "{}",
+      "createdAt": "2026-03-22T14:44:46.812Z"
+    }
+  ],
+  "tblChild": [],
+  "tblDocClient": [],
+  "tblRefund": [
+    {
+      "refundId": 1,
+      "clientId": 1,
+      "yearId": 2022,
+      "dateSubmission": "2020-01-01T00:00:00.000Z",
+      "amountRefund": 5000,
+      "dateRefund": null,
+      "statusId": 7,
+      "notes": null,
+      "userName": null,
+      "lastUpdate": "2026-03-21T01:13:43.233Z",
+      "dateCreated": "2026-03-14T17:38:41.941Z",
+      "paymentStatus": null
+    }
+  ],
+  "tblRefundSub": []
+}
