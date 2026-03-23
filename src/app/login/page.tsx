@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
@@ -9,7 +9,7 @@ const LOCK_STORAGE_KEYS = { attempts: "loginFailedAttempts", locked: "loginLocke
 const LOCK_ADMIN_PASSWORD = "open1";
 const MAX_ATTEMPTS = 3;
 
-export default function LoginPage() {
+function LoginPageContent() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
   const errorParam = searchParams.get("error");
@@ -372,5 +372,13 @@ export default function LoginPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-ink-50"><div className="text-ink-500">טוען...</div></div>}>
+      <LoginPageContent />
+    </Suspense>
   );
 }
