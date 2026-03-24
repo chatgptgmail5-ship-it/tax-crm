@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { phoneDisplayValue, phoneInputValue, licenseInputValue, isoToDdMmYyyy, parseDdMmYyyyToIso } from "@/lib/utils";
+import { phoneDisplayValue, phoneInputValue, licenseInputValue } from "@/lib/utils";
 
 const YP_OPTIONS = ["ממתין לחתימת הלקוח", "ממתין לקליטת ייצוג", "נקלט בהצלחה"];
 const MARITAL_OPTIONS = ["גרוש/ה", "נשוי/ה", "ידוע/ה בציבור", "פרוד/ה", "רווק/ה", "חד הורי/ת", "אלמנ/ה"];
@@ -64,10 +64,6 @@ export function HouseholdNewForm({ agents, clerks }: Props) {
     cp2: "",
     notes: "",
   });
-  const [hBirthStr, setHBirthStr] = useState("");
-  const [hIssueStr, setHIssueStr] = useState("");
-  const [wBirthStr, setWBirthStr] = useState("");
-  const [wIssueStr, setWIssueStr] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -150,28 +146,23 @@ export function HouseholdNewForm({ agents, clerks }: Props) {
               <div>
                 <label className="label block mb-1">תאריך לידה</label>
                 <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="dd/MM/yyyy"
-                  value={hBirthStr !== "" ? hBirthStr : isoToDdMmYyyy(husband.birthDate)}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    setHBirthStr(raw);
-                    const iso = parseDdMmYyyyToIso(raw);
-                    if (iso) setHusband((p) => ({ ...p, birthDate: iso }));
-                    else if (!raw.trim()) setHusband((p) => ({ ...p, birthDate: "" }));
-                  }}
+                  type="date"
+                  value={husband.birthDate}
+                  onChange={(e) => setHusband((p) => ({ ...p, birthDate: e.target.value }))}
                   className="input"
                 />
               </div>
               <div>
                 <label className="label block mb-1">מגדר</label>
-                <input
+                <select
                   value={husband.gender}
                   onChange={(e) => setHusband((p) => ({ ...p, gender: e.target.value }))}
                   className="input"
-                  placeholder="זכר / נקבה"
-                />
+                >
+                  <option value="">בחר</option>
+                  <option value="male">זכר</option>
+                  <option value="female">נקבה</option>
+                </select>
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -225,17 +216,9 @@ export function HouseholdNewForm({ agents, clerks }: Props) {
             <div>
               <label className="label block mb-1">תאריך הנפקה</label>
               <input
-                type="text"
-                inputMode="numeric"
-                placeholder="dd/MM/yyyy"
-                value={hIssueStr !== "" ? hIssueStr : isoToDdMmYyyy(husband.issueDate)}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  setHIssueStr(raw);
-                  const iso = parseDdMmYyyyToIso(raw);
-                  if (iso) setHusband((p) => ({ ...p, issueDate: iso }));
-                  else if (!raw.trim()) setHusband((p) => ({ ...p, issueDate: "" }));
-                }}
+                type="date"
+                value={husband.issueDate}
+                onChange={(e) => setHusband((p) => ({ ...p, issueDate: e.target.value }))}
                 className="input"
               />
             </div>
@@ -309,28 +292,23 @@ export function HouseholdNewForm({ agents, clerks }: Props) {
                 <div>
                   <label className="label block mb-1">תאריך לידה</label>
                   <input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="dd/MM/yyyy"
-                    value={wBirthStr !== "" ? wBirthStr : isoToDdMmYyyy(wife.birthDate)}
-                    onChange={(e) => {
-                      const raw = e.target.value;
-                      setWBirthStr(raw);
-                      const iso = parseDdMmYyyyToIso(raw);
-                      if (iso) setWife((p) => ({ ...p, birthDate: iso }));
-                      else if (!raw.trim()) setWife((p) => ({ ...p, birthDate: "" }));
-                    }}
+                    type="date"
+                    value={wife.birthDate}
+                    onChange={(e) => setWife((p) => ({ ...p, birthDate: e.target.value }))}
                     className="input"
                   />
                 </div>
                 <div>
                   <label className="label block mb-1">מגדר</label>
-                  <input
+                  <select
                     value={wife.gender}
                     onChange={(e) => setWife((p) => ({ ...p, gender: e.target.value }))}
                     className="input"
-                    placeholder="זכר / נקבה"
-                  />
+                  >
+                    <option value="">בחר</option>
+                    <option value="male">זכר</option>
+                    <option value="female">נקבה</option>
+                  </select>
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -384,17 +362,9 @@ export function HouseholdNewForm({ agents, clerks }: Props) {
               <div>
                 <label className="label block mb-1">תאריך הנפקה</label>
                 <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="dd/MM/yyyy"
-                  value={wIssueStr !== "" ? wIssueStr : isoToDdMmYyyy(wife.issueDate)}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    setWIssueStr(raw);
-                    const iso = parseDdMmYyyyToIso(raw);
-                    if (iso) setWife((p) => ({ ...p, issueDate: iso }));
-                    else if (!raw.trim()) setWife((p) => ({ ...p, issueDate: "" }));
-                  }}
+                  type="date"
+                  value={wife.issueDate}
+                  onChange={(e) => setWife((p) => ({ ...p, issueDate: e.target.value }))}
                   className="input"
                 />
               </div>
@@ -429,7 +399,7 @@ export function HouseholdNewForm({ agents, clerks }: Props) {
       </div>
 
       <button type="submit" className="btn btn-primary" disabled={saving}>
-        {saving ? "יוצר…" : "צור משק בית"}
+        {saving ? "יוצר…" : "צור לקוח"}
       </button>
     </form>
   );
