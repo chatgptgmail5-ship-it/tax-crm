@@ -11,7 +11,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { data: session, status } = useSession();
   const isAuthPage = pathname === "/login" || pathname === "/setup";
-  const isPublicPage = pathname?.startsWith("/questionnaire/");
+  const isPublicPage = pathname != null && pathname.startsWith("/questionnaire");
 
   useEffect(() => {
     if (status === "loading") return;
