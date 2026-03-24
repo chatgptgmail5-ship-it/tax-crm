@@ -20,7 +20,14 @@ export async function PATCH(
     return NextResponse.json({ error: "מזהה לא תקין" }, { status: 400 });
   }
 
-  let body: { householdId?: unknown; answers?: unknown; finalStatus?: unknown };
+  let body: {
+    householdId?: unknown;
+    answers?: unknown;
+    finalStatus?: unknown;
+    fullName?: unknown;
+    submittedAt?: unknown;
+    resultText?: unknown;
+  };
   try {
     body = await req.json();
   } catch {
@@ -38,30 +45,80 @@ export async function PATCH(
     return NextResponse.json({ error: "לא נמצא" }, { status: 404 });
   }
 
-  if (!body.answers || typeof body.answers !== "object") {
-    return NextResponse.json({ error: "חסרות תשובות" }, { status: 400 });
+  let answersObj: Record<string, string>;
+  try {
+    answersObj = JSON.parse(existing.answers) as Record<string, string>;
+  } catch {
+    return NextResponse.json({ error: "תשובות פגומות" }, { status: 400 });
   }
 
-  const answers = body.answers as Record<string, string>;
-  const resultText = calculateResult(answers);
+  let nextAnswersJson = existing.answers;
+  if (body.answers !== undefined) {
+    if (!body.answers || typeof body.answers !== "object") {
+      return NextResponse.json({ error: "חסרות תשובות" }, { status: 400 });
+    }
+    answersObj = body.answers as Record<string, string>;
+    nextAnswersJson = JSON.stringify(answersObj);
+  }
 
-  let finalStatus: string | null = null;
-  if (body.finalStatus === null || body.finalStatus === "") {
-    finalStatus = null;
-  } else if (typeof body.finalStatus === "string") {
-    const v = body.finalStatus.trim();
-    if (v === "קיבל" || v === "לא קיבל") finalStatus = v;
-    else if (v) return NextResponse.json({ error: "סטטוס סופי לא תקין" }, { status: 400 });
+  let nextResultText = existing.resultText;
+  if (body.answers !== undefined && body.resultText === undefined) {
+    nextResultText = calculateResult(answersObj);
+  } else if (body.resultText !== undefined) {
+    if (body.resultText === null) {
+      nextResultText = null;
+    } else if (typeof body.resultText === "string") {
+      nextResultText = body.resultText.trim() || null;
+    } else {
+      return NextResponse.json({ error: "תוצאה לא תקינה" }, { status: 400 });
+    }
+  }
+
+  let nextFullName = existing.fullName;
+  if (body.fullName !== undefined) {
+    if (typeof body.fullName !== "string") {
+      return NextResponse.json({ error: "שם לא תקין" }, { status: 400 });
+    }
+    nextFullName = body.fullName.trim();
+  }
+
+  let nextSubmittedAt = existing.submittedAt;
+  if (body.submittedAt !== undefined) {
+    const d = new Date(String(body.submittedAt));
+    if (Number.isNaN(d.getTime())) {
+      return NextResponse.json({ error: "תאריך לא תקין" }, { status: 400 });
+    }
+    nextSubmittedAt = d;
+  }
+
+  let nextFinalStatus = existing.finalStatus;
+  if (body.finalStatus !== undefined) {
+    if (body.finalStatus === null || body.finalStatus === "") {
+      nextFinalStatus = null;
+    } else if (typeof body.finalStatus === "string") {
+      const v = body.finalStatus.trim();
+      if (v === "קיבל" || v === "לא קיבל") nextFinalStatus = v;
+      else if (v) return NextResponse.json({ error: "סטטוס סופי לא תקין" }, { status: 400 });
+    }
   }
 
   const updated = await prisma.taxRefundQuestionnaireArchive.update({
     where: { id },
     data: {
-      answers: JSON.stringify(answers),
-      resultText,
-      finalStatus,
+      answers: nextAnswersJson,
+      resultText: nextResultText,
+      fullName: nextFullName,
+      submittedAt: nextSubmittedAt,
+      finalStatus: nextFinalStatus,
     },
   });
+
+  let outAnswers: Record<string, string>;
+  try {
+    outAnswers = JSON.parse(updated.answers) as Record<string, string>;
+  } catch {
+    outAnswers = {};
+  }
 
   return NextResponse.json({
     id: updated.id,
@@ -70,6 +127,6 @@ export async function PATCH(
     submittedAt: updated.submittedAt.toISOString(),
     resultText: updated.resultText,
     finalStatus: updated.finalStatus,
-    answers,
+    answers: outAnswers,
   });
 }

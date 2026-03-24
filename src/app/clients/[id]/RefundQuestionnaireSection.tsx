@@ -80,6 +80,35 @@ function getResultColorClass(result: string | null): string {
   return "text-emerald-600";
 }
 
+/** ISO datetime → yyyy-mm-dd for `<input type="date" />` (local calendar date). */
+function submittedAtToDateInputValue(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function dateInputValueToIso(dateStr: string): string | null {
+  const trimmed = dateStr.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
+  const [ys, ms, ds] = trimmed.split("-");
+  const y = parseInt(ys, 10);
+  const m = parseInt(ms, 10);
+  const day = parseInt(ds, 10);
+  const d = new Date(y, m - 1, day, 12, 0, 0, 0);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
+type InlineArchiveDraft = {
+  fullName: string;
+  submittedDate: string;
+  resultText: string;
+  finalStatus: string;
+};
+
 export function RefundQuestionnaireSection({ householdId, household }: Props) {
   const canEdit = useCanEdit();
   const [q, setQ] = useState<Questionnaire | null>(null);
@@ -93,10 +122,9 @@ export function RefundQuestionnaireSection({ householdId, household }: Props) {
   const [archiving, setArchiving] = useState(false);
   const [focus, setFocus] = useState<"live" | "archive">("live");
   const [selectedArchive, setSelectedArchive] = useState<ArchiveRow | null>(null);
-  const [archiveEditMode, setArchiveEditMode] = useState(false);
-  const [archiveEditAnswers, setArchiveEditAnswers] = useState<Record<string, string>>({});
-  const [archiveFinalStatus, setArchiveFinalStatus] = useState<string | null>(null);
-  const [archiveSaving, setArchiveSaving] = useState(false);
+  const [inlineEditingId, setInlineEditingId] = useState<number | null>(null);
+  const [inlineDraft, setInlineDraft] = useState<InlineArchiveDraft | null>(null);
+  const [inlineSaving, setInlineSaving] = useState(false);
 
   const fetchLatest = useCallback(async (opts?: { silent?: boolean }) => {
     const silent = opts?.silent === true;
@@ -138,9 +166,23 @@ export function RefundQuestionnaireSection({ householdId, household }: Props) {
   function backToLive() {
     setFocus("live");
     setSelectedArchive(null);
-    setArchiveEditMode(false);
-    setArchiveEditAnswers({});
-    setArchiveFinalStatus(null);
+    setInlineEditingId(null);
+    setInlineDraft(null);
+  }
+
+  function cancelInlineArchiveEdit() {
+    setInlineEditingId(null);
+    setInlineDraft(null);
+  }
+
+  function startInlineArchiveEdit(row: ArchiveRow) {
+    setInlineEditingId(row.id);
+    setInlineDraft({
+      fullName: row.fullName,
+      submittedDate: submittedAtToDateInputValue(row.submittedAt),
+      resultText: row.resultText ?? "",
+      finalStatus: row.finalStatus === "קיבל" || row.finalStatus === "לא קיבל" ? row.finalStatus : "",
+    });
   }
 
   async function handleSend() {
@@ -256,17 +298,27 @@ ${link}`;
     }
   }
 
-  async function handleSaveArchiveEdit() {
-    if (!selectedArchive) return;
-    setArchiveSaving(true);
+  async function handleInlineArchiveSave() {
+    if (inlineEditingId == null || !inlineDraft) return;
+    const row = archives.find((r) => r.id === inlineEditingId);
+    if (!row) return;
+    const submittedIso = dateInputValueToIso(inlineDraft.submittedDate);
+    if (!submittedIso) {
+      alert("תאריך לא תקין");
+      return;
+    }
+    setInlineSaving(true);
     try {
-      const res = await fetch(`/api/crm/questionnaire-archive/${selectedArchive.id}`, {
+      const res = await fetch(`/api/crm/questionnaire-archive/${inlineEditingId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           householdId,
-          answers: archiveEditAnswers,
-          finalStatus: archiveFinalStatus && archiveFinalStatus.length > 0 ? archiveFinalStatus : null,
+          answers: row.answers,
+          fullName: inlineDraft.fullName,
+          submittedAt: submittedIso,
+          resultText: inlineDraft.resultText.trim() || null,
+          finalStatus: inlineDraft.finalStatus === "קיבל" || inlineDraft.finalStatus === "לא קיבל" ? inlineDraft.finalStatus : null,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as Partial<ArchiveRow> & { error?: string };
@@ -275,35 +327,27 @@ ${link}`;
         return;
       }
       const updated: ArchiveRow = {
-        id: data.id ?? selectedArchive.id,
+        id: data.id ?? row.id,
         householdId: data.householdId ?? householdId,
-        fullName: data.fullName ?? selectedArchive.fullName,
-        submittedAt: data.submittedAt ?? selectedArchive.submittedAt,
+        fullName: data.fullName ?? inlineDraft.fullName,
+        submittedAt: data.submittedAt ?? submittedIso,
         resultText: data.resultText ?? null,
         finalStatus: data.finalStatus ?? null,
-        answers: (data.answers as Record<string, string>) ?? archiveEditAnswers,
+        answers: (data.answers as Record<string, string>) ?? row.answers,
       };
-      setSelectedArchive(updated);
-      setArchiveEditMode(false);
+      setSelectedArchive((cur) => (cur?.id === updated.id ? updated : cur));
+      cancelInlineArchiveEdit();
       await fetchArchives();
     } catch {
       alert("שגיאה בשמירה");
     } finally {
-      setArchiveSaving(false);
+      setInlineSaving(false);
     }
   }
 
   const isReadOnly = q?.dateReceived != null && !editing;
-  const fieldEditable =
-    focus === "live" ? editing : archiveEditMode;
-  const displayAnswers =
-    focus === "live"
-      ? editing
-        ? editAnswers
-        : (q?.answers ?? {})
-      : archiveEditMode
-        ? archiveEditAnswers
-        : (selectedArchive?.answers ?? {});
+  const fieldEditable = focus === "live" && editing;
+  const displayAnswers = focus === "live" ? (editing ? editAnswers : (q?.answers ?? {})) : (selectedArchive?.answers ?? {});
 
   const summaryDateSent = focus === "live" ? q?.dateSent : null;
   const summaryDateReceived = focus === "live" ? q?.dateReceived : selectedArchive?.submittedAt ?? null;
@@ -394,52 +438,12 @@ ${link}`;
                 חזרה לשאלון נוכחי
               </button>
             )}
-            {focus === "archive" && archiveEditMode && canEdit && (
-              <>
-                <button type="button" onClick={() => void handleSaveArchiveEdit()} disabled={archiveSaving} className="btn btn-primary">
-                  {archiveSaving ? <InlineSpinner className="size-4 text-white" /> : null}
-                  {archiveSaving ? "שומר…" : "שמור ארכיון"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setArchiveEditMode(false);
-                    if (selectedArchive) {
-                      setArchiveEditAnswers({ ...selectedArchive.answers });
-                      setArchiveFinalStatus(selectedArchive.finalStatus);
-                    }
-                  }}
-                  className="btn btn-ghost"
-                >
-                  ביטול
-                </button>
-              </>
-            )}
-            {focus === "archive" && archiveEditMode && canEdit && (
-              <label className="flex items-center gap-2 text-sm text-ink-700">
-                <span className="shrink-0">סופי</span>
-                <select
-                  value={archiveFinalStatus ?? ""}
-                  onChange={(e) => setArchiveFinalStatus(e.target.value || null)}
-                  className="input w-auto min-w-[7rem] py-1.5 text-sm"
-                >
-                  <option value="">—</option>
-                  {FINAL_STATUS_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
           </div>
 
           <h3 className="font-semibold text-ink-800 mb-4">
             שאלון החזר מס
             {focus === "archive" ? (
-              <span className="me-2 text-sm font-normal text-amber-700">
-                {archiveEditMode ? "(עריכת ארכיון)" : "(צפייה בארכיון)"}
-              </span>
+              <span className="me-2 text-sm font-normal text-amber-700">(צפייה בארכיון)</span>
             ) : null}
           </h3>
 
@@ -454,8 +458,7 @@ ${link}`;
                     value={displayAnswers[f.key] ?? ""}
                     onChange={(e) => {
                       if (!fieldEditable) return;
-                      if (focus === "live") setEditAnswers((p) => ({ ...p, [f.key]: e.target.value }));
-                      else setArchiveEditAnswers((p) => ({ ...p, [f.key]: e.target.value }));
+                      setEditAnswers((p) => ({ ...p, [f.key]: e.target.value }));
                     }}
                     readOnly={!fieldEditable}
                     className="input w-full"
@@ -467,8 +470,7 @@ ${link}`;
                     value={displayAnswers[f.key] ?? ""}
                     onChange={(e) => {
                       if (!fieldEditable) return;
-                      if (focus === "live") setEditAnswers((p) => ({ ...p, [f.key]: e.target.value }));
-                      else setArchiveEditAnswers((p) => ({ ...p, [f.key]: e.target.value }));
+                      setEditAnswers((p) => ({ ...p, [f.key]: e.target.value }));
                     }}
                     readOnly={!fieldEditable}
                     className="input w-full"
@@ -485,8 +487,7 @@ ${link}`;
                           checked={displayAnswers[f.key] === opt}
                           onChange={() => {
                             if (!fieldEditable) return;
-                            if (focus === "live") setEditAnswers((p) => ({ ...p, [f.key]: opt }));
-                            else setArchiveEditAnswers((p) => ({ ...p, [f.key]: opt }));
+                            setEditAnswers((p) => ({ ...p, [f.key]: opt }));
                           }}
                           disabled={!fieldEditable}
                         />
@@ -506,8 +507,7 @@ ${link}`;
                           checked={displayAnswers[f.key] === opt}
                           onChange={() => {
                             if (!fieldEditable) return;
-                            if (focus === "live") setEditAnswers((p) => ({ ...p, [f.key]: opt }));
-                            else setArchiveEditAnswers((p) => ({ ...p, [f.key]: opt }));
+                            setEditAnswers((p) => ({ ...p, [f.key]: opt }));
                           }}
                           disabled={!fieldEditable}
                         />
@@ -548,8 +548,7 @@ ${link}`;
                           checked={isSelected}
                           onChange={() => {
                             if (!fieldEditable) return;
-                            if (focus === "live") setEditAnswers((p) => ({ ...p, [qf.key]: opt }));
-                            else setArchiveEditAnswers((p) => ({ ...p, [qf.key]: opt }));
+                            setEditAnswers((p) => ({ ...p, [qf.key]: opt }));
                           }}
                           disabled={!fieldEditable}
                           style={isSelected ? { accentColor: "#2563eb" } : undefined}
@@ -596,57 +595,121 @@ ${link}`;
           {archives.length === 0 ? (
             <p className="text-sm text-ink-500">אין רשומות בארכיון.</p>
           ) : (
-            <table className="w-full min-w-[28rem] text-right text-xs">
+            <table className="w-full min-w-[28rem] text-xs text-center">
               <thead>
                 <tr className="border-b border-ink-200">
-                  <th className="px-2 py-2 font-medium text-ink-700">שם</th>
-                  <th className="px-2 py-2 font-medium text-ink-700">תאריך</th>
-                  <th className="px-2 py-2 font-medium text-ink-700">מגיע / לא מגיע</th>
-                  <th className="px-2 py-2 font-medium text-ink-700">סופי</th>
-                  <th className="px-2 py-2 font-medium text-ink-700">פעולה</th>
+                  <th className="px-2 py-2 font-medium text-ink-700 text-center align-middle">שם</th>
+                  <th className="px-2 py-2 font-medium text-ink-700 text-center align-middle">תאריך</th>
+                  <th className="px-2 py-2 font-medium text-ink-700 text-center align-middle">מגיע / לא מגיע</th>
+                  <th className="px-2 py-2 font-medium text-ink-700 text-center align-middle">סופי</th>
+                  <th className="px-2 py-2 font-medium text-ink-700 text-center align-middle">פעולה</th>
                 </tr>
               </thead>
               <tbody>
-                {archives.map((row) => (
-                  <tr key={row.id} className="border-b border-ink-100">
-                    <td className="px-2 py-2 text-ink-800">{row.fullName}</td>
-                    <td className="px-2 py-2 tabular-nums text-ink-600">{formatDateTime(row.submittedAt)}</td>
-                    <td className={`px-2 py-2 font-medium ${getResultColorClass(row.resultText)}`}>
-                      {row.resultText ?? "—"}
-                    </td>
-                    <td className="px-2 py-2 text-ink-600">{row.finalStatus ?? "—"}</td>
-                    <td className="px-2 py-2 whitespace-nowrap">
-                      <button
-                        type="button"
-                        className="text-primary-600 hover:underline ms-2"
-                        onClick={() => {
-                          setFocus("archive");
-                          setSelectedArchive(row);
-                          setArchiveEditMode(false);
-                          setArchiveEditAnswers({ ...row.answers });
-                          setArchiveFinalStatus(row.finalStatus);
-                        }}
-                      >
-                        צפה
-                      </button>
-                      {canEdit ? (
-                        <button
-                          type="button"
-                          className="text-primary-600 hover:underline ms-2"
-                          onClick={() => {
-                            setFocus("archive");
-                            setSelectedArchive(row);
-                            setArchiveEditMode(true);
-                            setArchiveEditAnswers({ ...row.answers });
-                            setArchiveFinalStatus(row.finalStatus);
-                          }}
-                        >
-                          ערוך
-                        </button>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
+                {archives.map((row) => {
+                  const isRowEditing = inlineEditingId === row.id && inlineDraft != null;
+                  const finalView =
+                    row.finalStatus === "קיבל" || row.finalStatus === "לא קיבל" ? row.finalStatus : "—";
+                  return (
+                    <tr key={row.id} className="border-b border-ink-100">
+                      {isRowEditing && inlineDraft ? (
+                        <>
+                          <td className="px-2 py-2 align-middle">
+                            <input
+                              type="text"
+                              value={inlineDraft.fullName}
+                              onChange={(e) => setInlineDraft((d) => (d ? { ...d, fullName: e.target.value } : d))}
+                              className="input w-full max-w-[11rem] mx-auto py-1.5 text-xs text-center"
+                            />
+                          </td>
+                          <td className="px-2 py-2 align-middle">
+                            <input
+                              type="date"
+                              value={inlineDraft.submittedDate}
+                              onChange={(e) => setInlineDraft((d) => (d ? { ...d, submittedDate: e.target.value } : d))}
+                              className="input w-full max-w-[10.5rem] mx-auto py-1.5 text-xs text-center"
+                            />
+                          </td>
+                          <td className="px-2 py-2 align-middle">
+                            <input
+                              type="text"
+                              value={inlineDraft.resultText}
+                              onChange={(e) => setInlineDraft((d) => (d ? { ...d, resultText: e.target.value } : d))}
+                              className="input w-full max-w-[9rem] mx-auto py-1.5 text-xs text-center"
+                            />
+                          </td>
+                          <td className="px-2 py-2 align-middle">
+                            <select
+                              value={inlineDraft.finalStatus}
+                              onChange={(e) => setInlineDraft((d) => (d ? { ...d, finalStatus: e.target.value } : d))}
+                              className="input w-full max-w-[7.5rem] mx-auto py-1.5 text-xs text-center"
+                            >
+                              <option value="">—</option>
+                              {FINAL_STATUS_OPTIONS.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="px-2 py-2 align-middle whitespace-nowrap">
+                            <button
+                              type="button"
+                              className="text-primary-600 hover:underline ms-1"
+                              disabled={inlineSaving}
+                              onClick={() => void handleInlineArchiveSave()}
+                            >
+                              {inlineSaving ? "שומר…" : "שמור"}
+                            </button>
+                            <button
+                              type="button"
+                              className="text-ink-600 hover:underline ms-2"
+                              disabled={inlineSaving}
+                              onClick={cancelInlineArchiveEdit}
+                            >
+                              ביטול
+                            </button>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-2 py-2 text-ink-800 text-center align-middle">{row.fullName}</td>
+                          <td className="px-2 py-2 tabular-nums text-ink-600 text-center align-middle">
+                            {formatDateTime(row.submittedAt)}
+                          </td>
+                          <td
+                            className={`px-2 py-2 font-medium text-center align-middle ${getResultColorClass(row.resultText)}`}
+                          >
+                            {row.resultText ?? "—"}
+                          </td>
+                          <td className="px-2 py-2 text-ink-800 text-center align-middle font-medium">{finalView}</td>
+                          <td className="px-2 py-2 whitespace-nowrap text-center align-middle">
+                            <button
+                              type="button"
+                              className="text-primary-600 hover:underline ms-1"
+                              onClick={() => {
+                                cancelInlineArchiveEdit();
+                                setFocus("archive");
+                                setSelectedArchive(row);
+                              }}
+                            >
+                              צפה
+                            </button>
+                            {canEdit ? (
+                              <button
+                                type="button"
+                                className="text-primary-600 hover:underline ms-2"
+                                onClick={() => startInlineArchiveEdit(row)}
+                              >
+                                ערוך
+                              </button>
+                            ) : null}
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
