@@ -130,3 +130,32 @@ export async function PATCH(
     answers: outAnswers,
   });
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getServerSession(authOptions);
+  if (!requireCanEdit(session?.user?.role)) {
+    return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
+  }
+
+  const { id: idParam } = await params;
+  const id = parseInt(idParam, 10);
+  if (Number.isNaN(id)) {
+    return NextResponse.json({ error: "מזהה לא תקין" }, { status: 400 });
+  }
+
+  const householdId = parseInt(new URL(req.url).searchParams.get("householdId") ?? "", 10);
+  if (Number.isNaN(householdId)) {
+    return NextResponse.json({ error: "householdId חסר" }, { status: 400 });
+  }
+
+  const existing = await prisma.taxRefundQuestionnaireArchive.findUnique({ where: { id } });
+  if (!existing || existing.householdId !== householdId) {
+    return NextResponse.json({ error: "לא נמצא" }, { status: 404 });
+  }
+
+  await prisma.taxRefundQuestionnaireArchive.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { MessageCircle, Pencil } from "lucide-react";
+import { MessageCircle, Pencil, Trash2 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import { ID_FIELDS, OPTIONS, GENDER_OPTIONS, MARITAL_OPTIONS, QUESTION_FIELDS } from "@/lib/questionnaire-fields";
 import { calculateResult } from "@/lib/questionnaire-scoring";
@@ -125,6 +125,8 @@ export function RefundQuestionnaireSection({ householdId, household }: Props) {
   const [inlineEditingId, setInlineEditingId] = useState<number | null>(null);
   const [inlineDraft, setInlineDraft] = useState<InlineArchiveDraft | null>(null);
   const [inlineSaving, setInlineSaving] = useState(false);
+  const [pendingDeleteRow, setPendingDeleteRow] = useState<ArchiveRow | null>(null);
+  const [archiveDeletingId, setArchiveDeletingId] = useState<number | null>(null);
 
   const fetchLatest = useCallback(async (opts?: { silent?: boolean }) => {
     const silent = opts?.silent === true;
@@ -291,10 +293,52 @@ ${link}`;
         return;
       }
       await fetchArchives();
+
+      const resetRes = await fetch("/api/questionnaire/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: q.id, householdId, resetForNewEntry: true }),
+      });
+      const resetData = (await resetRes.json().catch(() => ({}))) as { error?: string };
+      if (!resetRes.ok) {
+        alert(resetData?.error ?? "הארכיון נשמר אך ניקוי השאלון נכשל. נסו שוב או רעננו את הדף.");
+        return;
+      }
+      await fetchLatest({ silent: true });
+      setEditAnswers({});
+      setEditing(true);
     } catch {
       alert("שגיאה בשמירת ארכיון");
     } finally {
       setArchiving(false);
+    }
+  }
+
+  async function confirmArchiveDelete() {
+    if (!pendingDeleteRow) return;
+    const row = pendingDeleteRow;
+    setPendingDeleteRow(null);
+    setArchiveDeletingId(row.id);
+    try {
+      const res = await fetch(`/api/crm/questionnaire-archive/${row.id}?householdId=${householdId}`, {
+        method: "DELETE",
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        alert(data?.error ?? "שגיאה במחיקה");
+        return;
+      }
+      setArchives((prev) => prev.filter((r) => r.id !== row.id));
+      if (selectedArchive?.id === row.id) {
+        backToLive();
+      }
+      if (inlineEditingId === row.id) {
+        cancelInlineArchiveEdit();
+      }
+    } catch {
+      alert("שגיאה במחיקה");
+    } finally {
+      setArchiveDeletingId(null);
     }
   }
 
@@ -376,7 +420,8 @@ ${link}`;
   }
 
   return (
-    <div className="flex gap-6 flex-wrap lg:flex-nowrap" dir="rtl">
+    <>
+      <div className="flex gap-6 flex-wrap lg:flex-nowrap" dir="rtl">
       <div className="flex-1 min-w-0 order-2 lg:order-1">
         <div className="card p-6 overflow-y-auto max-h-[calc(100vh-12rem)]">
           <div className="flex flex-wrap gap-3 mb-6">
@@ -704,6 +749,18 @@ ${link}`;
                                 ערוך
                               </button>
                             ) : null}
+                            {canEdit ? (
+                              <button
+                                type="button"
+                                className="inline-flex items-center justify-center ms-2 p-1 rounded text-ink-500 hover:text-red-600 hover:bg-red-50 disabled:opacity-50 align-middle"
+                                title="מחק"
+                                disabled={archiveDeletingId === row.id}
+                                aria-label="מחק רשומת ארכיון"
+                                onClick={() => setPendingDeleteRow(row)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            ) : null}
                           </td>
                         </>
                       )}
@@ -716,5 +773,35 @@ ${link}`;
         </div>
       </div>
     </div>
+
+      {pendingDeleteRow ? (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+          dir="rtl"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="archive-delete-confirm-title"
+        >
+          <div className="card p-6 max-w-md w-full shadow-lg">
+            <p id="archive-delete-confirm-title" className="text-sm text-ink-800">
+              האם אתה בטוח שברצונך למחוק את הרשומה?
+            </p>
+            <div className="flex flex-wrap gap-2 justify-end mt-6">
+              <button type="button" className="btn btn-ghost" onClick={() => setPendingDeleteRow(null)}>
+                ביטול
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={archiveDeletingId != null}
+                onClick={() => void confirmArchiveDelete()}
+              >
+                כן
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

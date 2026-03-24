@@ -13,8 +13,40 @@ export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
     const id = typeof body.id === "number" ? body.id : parseInt(String(body.id ?? ""), 10);
-    const answers = body.answers;
     if (isNaN(id)) return NextResponse.json({ error: "id חסר" }, { status: 400 });
+
+    if (body.resetForNewEntry === true) {
+      const householdId =
+        typeof body.householdId === "number" ? body.householdId : parseInt(String(body.householdId ?? ""), 10);
+      if (Number.isNaN(householdId)) {
+        return NextResponse.json({ error: "householdId חסר" }, { status: 400 });
+      }
+      const rec = await prisma.taxRefundQuestionnaire.findUnique({ where: { id } });
+      if (!rec || rec.householdId !== householdId) {
+        return NextResponse.json({ error: "לא נמצא" }, { status: 404 });
+      }
+      await prisma.taxRefundQuestionnaire.update({
+        where: { id },
+        data: {
+          dateReceived: null,
+          answers: null,
+          result: null,
+        },
+      });
+      const updated = await prisma.taxRefundQuestionnaire.findUnique({ where: { id } });
+      if (!updated) return NextResponse.json({ error: "שגיאה" }, { status: 500 });
+      return NextResponse.json({
+        ok: true,
+        id: updated.id,
+        token: updated.token,
+        dateSent: updated.dateSent,
+        dateReceived: updated.dateReceived,
+        answers: updated.answers ? JSON.parse(updated.answers) : null,
+        result: updated.result,
+      });
+    }
+
+    const answers = body.answers;
     if (!answers || typeof answers !== "object") return NextResponse.json({ error: "חסרות תשובות" }, { status: 400 });
 
     const result = calculateResult(answers);
