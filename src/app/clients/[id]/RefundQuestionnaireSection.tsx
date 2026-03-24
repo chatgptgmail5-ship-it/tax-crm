@@ -6,7 +6,7 @@ import { formatDateTime } from "@/lib/utils";
 import { ID_FIELDS, OPTIONS, GENDER_OPTIONS, MARITAL_OPTIONS, QUESTION_FIELDS } from "@/lib/questionnaire-fields";
 import { calculateResult } from "@/lib/questionnaire-scoring";
 import { InlineSpinner, SkeletonBlock } from "@/components/InlineSpinner";
-import { useQuestionnaireNotifications } from "@/components/QuestionnaireNotificationsProvider";
+import { useQuestionnaireUnread } from "@/contexts/QuestionnaireUnreadContext";
 
 const PHONE_ERROR = "לא נמצא מספר טלפון ללקוח";
 
@@ -58,7 +58,7 @@ function getResultColorClass(result: string | null): string {
 }
 
 export function RefundQuestionnaireSection({ householdId, household }: Props) {
-  const { refresh: refreshNotifications } = useQuestionnaireNotifications();
+  const { refetch: refetchUnread } = useQuestionnaireUnread();
   const [q, setQ] = useState<Questionnaire | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -66,42 +66,49 @@ export function RefundQuestionnaireSection({ householdId, household }: Props) {
   const [editAnswers, setEditAnswers] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
-  const fetchLatest = useCallback(
-    async (opts?: { silent?: boolean }) => {
-      const silent = opts?.silent === true;
-      if (!silent) setLoading(true);
-      try {
-        const res = await fetch(`/api/questionnaire/latest?householdId=${householdId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setQ(data);
-          setEditAnswers(data?.answers ?? {});
-          if (data?.dateReceived) {
-            void fetch("/api/questionnaire/mark-viewed", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ householdId }),
-            }).then(() => refreshNotifications());
-          }
-        }
-      } catch {
-        if (!silent) setQ(null);
-      } finally {
-        if (!silent) setLoading(false);
+  const fetchLatest = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent === true;
+    if (!silent) setLoading(true);
+    try {
+      const res = await fetch(`/api/questionnaire/latest?householdId=${householdId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setQ(data);
+        setEditAnswers(data?.answers ?? {});
       }
-    },
-    [householdId, refreshNotifications]
-  );
+    } catch {
+      if (!silent) setQ(null);
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, [householdId]);
 
   useEffect(() => {
     fetchLatest();
   }, [fetchLatest]);
 
   useEffect(() => {
-    if (editing) return;
-    const t = window.setInterval(() => void fetchLatest({ silent: true }), 4000);
-    return () => clearInterval(t);
-  }, [fetchLatest, editing]);
+    let cancelled = false;
+    (async () => {
+      try {
+        await fetch("/api/questionnaire/mark-viewed", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ householdId }),
+        });
+      } finally {
+        if (!cancelled) void refetchUnread();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [householdId, refetchUnread]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => void fetchLatest({ silent: true }), 6000);
+    return () => clearInterval(id);
+  }, [fetchLatest]);
 
   async function handleSend() {
     const clientPhone = getClientPhone(household);

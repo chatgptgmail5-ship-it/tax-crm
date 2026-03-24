@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { SessionProvider } from "@/components/SessionProvider";
 import { LayoutShell } from "@/components/LayoutShell";
-import { QuestionnaireNotificationsProvider } from "@/components/QuestionnaireNotificationsProvider";
+import { QuestionnaireUnreadProvider } from "@/contexts/QuestionnaireUnreadContext";
 
 export const metadata: Metadata = {
   title: "ניהול לקוחות מס",
@@ -19,9 +19,9 @@ export default function RootLayout({
     <html lang="he" dir="rtl">
       <body className="min-h-screen antialiased">
         <SessionProvider>
-          <QuestionnaireNotificationsProvider>
+          <QuestionnaireUnreadProvider>
             <LayoutShell>{children}</LayoutShell>
-          </QuestionnaireNotificationsProvider>
+          </QuestionnaireUnreadProvider>
         </SessionProvider>
       </body>
     </html>

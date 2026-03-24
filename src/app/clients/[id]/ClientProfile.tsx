@@ -24,7 +24,7 @@ import { ImportantDatesSection } from "./ImportantDatesSection";
 import { ActivitySection } from "./ActivitySection";
 import { RefundQuestionnaireSection } from "./RefundQuestionnaireSection";
 import { FileQuestion } from "lucide-react";
-import { useQuestionnaireNotifications } from "@/components/QuestionnaireNotificationsProvider";
+import { useQuestionnaireUnread } from "@/contexts/QuestionnaireUnreadContext";
 
 const TABS = [
   { id: "info", label: "מידע ראשי", icon: User },
@@ -123,8 +123,8 @@ type Props = {
 export function ClientProfile({ household, agents, clerks, documents, caseStatuses, clientRefunds, commissionByClientId }: Props) {
   const [tab, setTab] = useState("info");
   const canEdit = useCanEdit();
-  const { isHouseholdUnread } = useQuestionnaireNotifications();
-  const questionnaireTabUnread = isHouseholdUnread(household.id) && tab !== "questionnaire";
+  const { unreadHouseholdIds } = useQuestionnaireUnread();
+  const questionnaireUnread = unreadHouseholdIds.has(household.id);
 
   const husband = household.persons.find((p) => p.role === "husband");
   const wife = household.persons.find((p) => p.role === "wife");
@@ -151,27 +151,26 @@ export function ClientProfile({ household, agents, clerks, documents, caseStatus
       <div className="flex flex-wrap gap-2 border-b border-ink-200">
         {TABS.map((t) => {
           const Icon = t.icon;
-          const showYellowDot = t.id === "questionnaire" && questionnaireTabUnread;
           return (
             <button
               key={t.id}
               type="button"
               onClick={() => setTab(t.id)}
-              className={`relative flex items-center gap-2 rounded-t-lg px-4 py-2 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 rounded-t-lg px-4 py-2 text-sm font-medium transition-colors ${
                 tab === t.id
                   ? "bg-primary-50 text-primary-700"
                   : "text-ink-600 hover:bg-primary-50 hover:text-primary-700"
               }`}
             >
-              {showYellowDot && (
-                <span
-                  className="absolute left-2 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-amber-400"
-                  title="שאלון חדש להצגה"
-                  aria-hidden
-                />
-              )}
               <Icon className="h-4 w-4" />
               {t.label}
+              {t.id === "questionnaire" && questionnaireUnread ? (
+                <span
+                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
+                  title="שאלון חדש"
+                  aria-hidden
+                />
+              ) : null}
             </button>
           );
         })}

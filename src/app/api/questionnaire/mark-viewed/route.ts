@@ -2,36 +2,32 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isQuestionnaireUnread } from "@/lib/questionnaire-unread";
 
+/** Mark all received questionnaires for a household as seen in CRM (staff opened שאלון החזר מס tab). */
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
-    return NextResponse.json({ error: "נדרשת התחברות" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     const body = await req.json();
     const householdId =
       typeof body.householdId === "number" ? body.householdId : parseInt(String(body.householdId ?? ""), 10);
-    if (isNaN(householdId)) {
+    if (Number.isNaN(householdId)) {
       return NextResponse.json({ error: "householdId חסר" }, { status: 400 });
     }
 
-    const recs = await prisma.taxRefundQuestionnaire.findMany({
-      where: { householdId, dateReceived: { not: null } },
+    await prisma.taxRefundQuestionnaire.updateMany({
+      where: {
+        householdId,
+        dateReceived: { not: null },
+        isViewedInCRM: false,
+      },
+      data: { isViewedInCRM: true },
     });
 
-    const ids = recs.filter((r) => isQuestionnaireUnread(r.dateReceived, r.crmViewedAt)).map((r) => r.id);
-
-    if (ids.length) {
-      await prisma.taxRefundQuestionnaire.updateMany({
-        where: { id: { in: ids } },
-        data: { crmViewedAt: new Date() },
-      });
-    }
-
-    return NextResponse.json({ ok: true, marked: ids.length });
+    return NextResponse.json({ ok: true });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "שגיאה" }, { status: 500 });
