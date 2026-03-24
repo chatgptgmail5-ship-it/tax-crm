@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { formatDate, isoToDdMmYyyy, parseDdMmYyyyToIso } from "@/lib/utils";
+import { formatDate, isoToDdMmYyyy } from "@/lib/utils";
 
 export type EmployeeAgreementFields = {
   date?: string;
@@ -127,30 +127,17 @@ function EditableCellDate({
   value: string;
 }) {
   const v = fields[fieldKey] ?? value;
-  const inputClass =
-    "w-full border-0 bg-transparent py-0.5 px-1 text-ink-900 font-bold text-center focus:outline-none focus:ring-1 focus:ring-primary-500 rounded min-w-0";
-  const [raw, setRaw] = useState("");
-  useEffect(() => {
-    setRaw("");
-  }, [v]);
+  const inputClass = "w-full border-0 bg-transparent py-0.5 px-1 text-ink-900 font-bold text-center focus:outline-none focus:ring-1 focus:ring-primary-500 rounded min-w-0";
   if (!canEdit) {
     return (
       <span className={`font-bold text-center ${className}`}>{v ? formatDate(v) : "—"}</span>
     );
   }
-  const display = raw !== "" ? raw : isoToDdMmYyyy(v);
   return (
     <input
-      type="text"
-      inputMode="numeric"
-      placeholder="dd/MM/yyyy"
-      value={display}
-      onChange={(e) => {
-        const r = e.target.value;
-        setRaw(r);
-        const iso = parseDdMmYyyyToIso(r);
-        if (iso) setField(fieldKey, iso);
-      }}
+      type="date"
+      value={v || ""}
+      onChange={(e) => setField(fieldKey, e.target.value)}
       className={inputClass + " " + className}
     />
   );
@@ -217,7 +204,6 @@ export function EmployeeAgreementTemplate({
     parseFieldsData(initialFieldsData, clientDefaults)
   );
   const [saving, setSaving] = useState(false);
-  const [dateInputStr, setDateInputStr] = useState("");
 
   useEffect(() => {
     const parsed = parseFieldsData(initialFieldsData, clientDefaults);
@@ -234,7 +220,6 @@ export function EmployeeAgreementTemplate({
       }
     }
     setFields(parsed);
-    setDateInputStr("");
   }, [initialFieldsData, defaultAgentName, clientDefaults]);
 
   function setField(key: keyof EmployeeAgreementFields, value: string) {
@@ -341,15 +326,9 @@ export function EmployeeAgreementTemplate({
             <div className="flex flex-col items-center text-center">
               {canEdit ? (
                 <input
-                  type="text"
-                  value={dateInputStr !== "" ? dateInputStr : isoToDdMmYyyy(fields.date || effectiveDate)}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    setDateInputStr(raw);
-                    const iso = parseDdMmYyyyToIso(raw);
-                    if (iso) setField("date", iso);
-                  }}
-                  placeholder="dd/mm/yyyy"
+                  type="date"
+                  value={fields.date || effectiveDate}
+                  onChange={(e) => setField("date", e.target.value)}
                   className="w-28 border-0 bg-transparent p-0 text-ink-900 focus:outline-none focus:ring-0 text-center"
                   style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: "14px" }}
                 />

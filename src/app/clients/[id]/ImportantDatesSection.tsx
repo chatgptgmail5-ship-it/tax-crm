@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { useCanEdit } from "@/hooks/useCanEdit";
-import { formatDate, isoToDdMmYyyy, parseDdMmYyyyToIso } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 type ImportantDate = {
   id: number;
@@ -42,7 +42,6 @@ export function ImportantDatesSection({ householdId, readOnly }: Props) {
     subject: "",
     details: "",
   });
-  const [dateInputStr, setDateInputStr] = useState("");
 
   const fetchDates = useCallback(async () => {
     const res = await fetch(`/api/households/${householdId}/important-dates`);
@@ -69,10 +68,6 @@ export function ImportantDatesSection({ householdId, readOnly }: Props) {
     return () => { cancelled = true; };
   }, [fetchDates, fetchUsers]);
 
-  useEffect(() => {
-    if (showForm) setDateInputStr("");
-  }, [showForm]);
-
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -80,7 +75,7 @@ export function ImportantDatesSection({ householdId, readOnly }: Props) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        date: parseDdMmYyyyToIso(dateInputStr) || form.date,
+        date: form.date,
         performerId: form.performerId ? Number(form.performerId) : null,
         subject: form.subject.trim() || null,
         details: form.details.trim() || null,
@@ -90,7 +85,6 @@ export function ImportantDatesSection({ householdId, readOnly }: Props) {
     if (res.ok) {
       const today = new Date().toISOString().slice(0, 10);
       setForm({ date: today, performerId: "", subject: "", details: "" });
-      setDateInputStr(isoToDdMmYyyy(today));
       setShowForm(false);
       fetchDates();
     }
@@ -143,16 +137,9 @@ export function ImportantDatesSection({ householdId, readOnly }: Props) {
             <div>
               <label className="label block mb-1 text-xs">תאריך</label>
               <input
-                type="text"
-                inputMode="numeric"
-                placeholder="dd/MM/yyyy"
-                value={dateInputStr !== "" ? dateInputStr : isoToDdMmYyyy(form.date)}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  setDateInputStr(raw);
-                  const iso = parseDdMmYyyyToIso(raw);
-                  if (iso) setForm((p) => ({ ...p, date: iso }));
-                }}
+                type="date"
+                value={form.date}
+                onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
                 className="input"
                 required
               />

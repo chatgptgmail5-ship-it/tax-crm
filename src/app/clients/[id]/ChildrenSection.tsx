@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, Eye } from "lucide-react";
-import { phoneDisplayValue, phoneInputValue, isoToDdMmYyyy, parseDdMmYyyyToIso } from "@/lib/utils";
+import { phoneDisplayValue, phoneInputValue } from "@/lib/utils";
 
 type Child = {
   id: number;
@@ -58,17 +58,13 @@ export function ChildrenSection({ householdId, children, readOnly, fatherName = 
   const [editing, setEditing] = useState<number | null>(null);
   const [newChild, setNewChild] = useState<Partial<Child> & { isNew?: boolean }>({});
   const [editForm, setEditForm] = useState<Partial<Child> | null>(null);
-  const [newBirthInputStr, setNewBirthInputStr] = useState("");
-  const [editBirthInputStr, setEditBirthInputStr] = useState("");
 
   function openAddForm() {
     setNewChild({ fatherName: fatherName || undefined, motherName: motherName || undefined });
-    setNewBirthInputStr("");
     setEditing(-1);
   }
 
   function openViewForm(c: Child) {
-    setEditBirthInputStr("");
     setEditForm({
       id: c.id,
       firstName: c.firstName ?? "",
@@ -108,7 +104,6 @@ export function ChildrenSection({ householdId, children, readOnly, fatherName = 
     setSaving(false);
     if (res.ok) {
       setNewChild({});
-      setNewBirthInputStr("");
       setEditing(null);
       router.refresh();
     }
@@ -123,7 +118,7 @@ export function ChildrenSection({ householdId, children, readOnly, fatherName = 
       body: JSON.stringify({
         firstName: editForm.firstName ?? null,
         lastName: editForm.lastName ?? null,
-        birthDay: parseDdMmYyyyToIso(editBirthInputStr) || null,
+        birthDay: editForm.birthDay || null,
         idNumber: editForm.idNumber ?? null,
         gender: editForm.gender ?? null,
         custodyOf: editForm.custodyOf ?? null,
@@ -137,7 +132,6 @@ export function ChildrenSection({ householdId, children, readOnly, fatherName = 
     setSaving(false);
     if (res.ok) {
       setEditForm(null);
-      setEditBirthInputStr("");
       setEditing(null);
       router.refresh();
     }
@@ -203,17 +197,15 @@ export function ChildrenSection({ householdId, children, readOnly, fatherName = 
             <div>
               <label className="label block mb-1 text-xs">תאריך לידה</label>
               <input
-                type="text"
-                inputMode="numeric"
-                placeholder="dd/MM/yyyy"
-                value={newBirthInputStr !== "" ? newBirthInputStr : isoToDdMmYyyy(newChild.birthDay ? toLocalDate(newChild.birthDay) : "")}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  setNewBirthInputStr(raw);
-                  const iso = parseDdMmYyyyToIso(raw);
-                  if (iso) setNewChild((p) => ({ ...p, birthDay: iso as unknown as Date }));
-                  else if (!raw.trim()) setNewChild((p) => ({ ...p, birthDay: null }));
-                }}
+                type="date"
+                value={
+                  typeof newChild.birthDay === "string"
+                    ? newChild.birthDay
+                    : newChild.birthDay
+                      ? toLocalDate(newChild.birthDay)
+                      : ""
+                }
+                onChange={(e) => setNewChild((p) => ({ ...p, birthDay: e.target.value as unknown as Date }))}
                 className="input"
               />
             </div>
@@ -337,23 +329,17 @@ export function ChildrenSection({ householdId, children, readOnly, fatherName = 
             <div>
               <label className="label block mb-1 text-xs">תאריך לידה</label>
               <input
-                type="text"
-                inputMode="numeric"
-                placeholder="dd/MM/yyyy"
+                type="date"
                 value={
-                  editBirthInputStr !== ""
-                    ? editBirthInputStr
-                    : isoToDdMmYyyy(
-                        typeof editForm.birthDay === "string" ? editForm.birthDay : editForm.birthDay ? toLocalDate(editForm.birthDay) : ""
-                      )
+                  typeof editForm.birthDay === "string"
+                    ? editForm.birthDay
+                    : editForm.birthDay
+                      ? toLocalDate(editForm.birthDay)
+                      : ""
                 }
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  setEditBirthInputStr(raw);
-                  const iso = parseDdMmYyyyToIso(raw);
-                  if (iso) setEditForm((p) => (p ? { ...p, birthDay: iso as unknown as Date } : p));
-                  else if (!raw.trim()) setEditForm((p) => (p ? { ...p, birthDay: null } : p));
-                }}
+                onChange={(e) =>
+                  setEditForm((p) => (p ? { ...p, birthDay: e.target.value as unknown as Date } : p))
+                }
                 className="input"
               />
             </div>

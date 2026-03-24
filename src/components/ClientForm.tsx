@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { isoToDdMmYyyy, parseDdMmYyyyToIso } from "@/lib/utils";
 
 type Agent = { agentId: number; name: string | null };
 type Clerk = { clerkId: number; name: string | null };
@@ -64,9 +63,7 @@ export function ClientForm({
       tz: fd.get("tz") || null,
       birthDay: (() => {
         const s = ((fd.get("birthDay") as string) ?? "").trim();
-        if (!s) return null;
-        const iso = parseDdMmYyyyToIso(s);
-        return iso ? new Date(iso).toISOString() : null;
+        return s ? new Date(s).toISOString() : null;
       })(),
       mobile: fd.get("mobile") || null,
       maritalStatus: fd.get("maritalStatus") || null,
@@ -75,9 +72,7 @@ export function ClientForm({
       tzSub: fd.get("tzSub") || null,
       birthDaySub: (() => {
         const s = ((fd.get("birthDaySub") as string) ?? "").trim();
-        if (!s) return null;
-        const iso = parseDdMmYyyyToIso(s);
-        return iso ? new Date(iso).toISOString() : null;
+        return s ? new Date(s).toISOString() : null;
       })(),
       mobileSub: fd.get("mobileSub") || null,
       migdarSub: fd.get("migdarSub") || null,
@@ -133,11 +128,9 @@ export function ClientForm({
           <input
             id="birthDay"
             name="birthDay"
-            type="text"
-            inputMode="numeric"
-            placeholder="dd/MM/yyyy"
+            type="date"
             className="input"
-            defaultValue={isoToDdMmYyyy(toLocalDate(client?.birthDay ?? null))}
+            defaultValue={toLocalDate(client?.birthDay ?? null)}
           />
         </div>
         <div>

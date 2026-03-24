@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { phoneDisplayValue, phoneInputValue, licenseInputValue, isoToDdMmYyyy, parseDdMmYyyyToIso } from "@/lib/utils";
+import { phoneDisplayValue, phoneInputValue, licenseInputValue } from "@/lib/utils";
 
 const YP_OPTIONS = ["ממתין לחתימת הלקוח", "ממתין לקליטת ייצוג", "נקלט בהצלחה"];
 const MARITAL_OPTIONS = ["גרוש/ה", "נשוי/ה", "ידוע/ה בציבור", "פרוד/ה", "רווק/ה", "חד הורי/ת", "אלמנ/ה"];
@@ -45,8 +45,6 @@ function PersonFields({
   card?: boolean;
   disabled?: boolean;
 }) {
-  const [birthStr, setBirthStr] = useState("");
-  const [issueStr, setIssueStr] = useState("");
   const fields = (
     <div className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -84,17 +82,9 @@ function PersonFields({
         <div>
           <label className="label block mb-1">תאריך הנפקה</label>
           <input
-            type="text"
-            inputMode="numeric"
-            placeholder="dd/MM/yyyy"
-            value={issueStr !== "" ? issueStr : isoToDdMmYyyy(p.issueDate ?? "")}
-            onChange={(e) => {
-              const raw = e.target.value;
-              setIssueStr(raw);
-              const iso = parseDdMmYyyyToIso(raw);
-              if (iso) setP((prev) => ({ ...prev, issueDate: iso }));
-              else if (!raw.trim()) setP((prev) => ({ ...prev, issueDate: "" }));
-            }}
+            type="date"
+            value={p.issueDate ?? ""}
+            onChange={(e) => setP((prev) => ({ ...prev, issueDate: e.target.value }))}
             className="input"
             readOnly={disabled}
             disabled={disabled}
@@ -104,17 +94,9 @@ function PersonFields({
           <div>
             <label className="label block mb-1">תאריך לידה</label>
             <input
-              type="text"
-              inputMode="numeric"
-              placeholder="dd/MM/yyyy"
-              value={birthStr !== "" ? birthStr : isoToDdMmYyyy(p.birthDate)}
-              onChange={(e) => {
-                const raw = e.target.value;
-                setBirthStr(raw);
-                const iso = parseDdMmYyyyToIso(raw);
-                if (iso) setP((prev) => ({ ...prev, birthDate: iso }));
-                else if (!raw.trim()) setP((prev) => ({ ...prev, birthDate: "" }));
-              }}
+              type="date"
+              value={p.birthDate ?? ""}
+              onChange={(e) => setP((prev) => ({ ...prev, birthDate: e.target.value }))}
               className="input"
               readOnly={disabled}
               disabled={disabled}

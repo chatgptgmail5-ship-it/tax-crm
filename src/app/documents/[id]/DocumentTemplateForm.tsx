@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { CanEditGate } from "@/components/CanEditGate";
-import { formatDate, isoToDdMmYyyy, parseDdMmYyyyToIso } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 export type FieldsData = {
   firstName?: string;
@@ -56,7 +56,6 @@ export function DocumentTemplateForm({
     return { ...DEFAULT_FIELDS };
   });
   const [saving, setSaving] = useState(false);
-  const [dateInputStr, setDateInputStr] = useState("");
 
   useEffect(() => {
     try {
@@ -65,7 +64,6 @@ export function DocumentTemplateForm({
         setFields((prev) => ({ ...prev, ...parsed }));
       }
     } catch (_) {}
-    setDateInputStr("");
   }, [initialFieldsData]);
 
   function setField(key: keyof FieldsData, value: string) {
@@ -193,16 +191,9 @@ export function DocumentTemplateForm({
                 <td className="border border-ink-300 py-1 px-2" colSpan={3}>
                   {canEdit ? (
                     <input
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="dd/MM/yyyy"
-                      value={dateInputStr !== "" ? dateInputStr : isoToDdMmYyyy(fields.date ?? "")}
-                      onChange={(e) => {
-                        const raw = e.target.value;
-                        setDateInputStr(raw);
-                        const iso = parseDdMmYyyyToIso(raw);
-                        if (iso) setField("date", iso);
-                      }}
+                      type="date"
+                      value={fields.date ?? ""}
+                      onChange={(e) => setField("date", e.target.value)}
                       className="border-0 bg-transparent py-0.5 px-1 text-ink-900 focus:outline-none focus:ring-1 focus:ring-primary-500 rounded"
                     />
                   ) : (

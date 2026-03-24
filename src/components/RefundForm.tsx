@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { isoToDdMmYyyy, parseDdMmYyyyToIso } from "@/lib/utils";
 
 type Client = { clientId: number; clientName: string | null; lastName: string | null };
 type Refund = {
@@ -72,9 +71,9 @@ export function RefundForm({
     const body = {
       clientId: parseInt(fd.get("clientId") as string),
       yearId: parseInt(fd.get("yearId") as string),
-      dateSubmission: dateSubmissionRaw ? parseDdMmYyyyToIso(dateSubmissionRaw) || null : null,
+      dateSubmission: dateSubmissionRaw || null,
       amountRefund: fd.get("amountRefund") ? parseFloat(fd.get("amountRefund") as string) : null,
-      dateRefund: dateRefundRaw ? parseDdMmYyyyToIso(dateRefundRaw) || null : null,
+      dateRefund: dateRefundRaw || null,
       statusName: (fd.get("statusName") as string) || null,
       notes: (fd.get("notes") as string) || null,
     };
@@ -163,11 +162,9 @@ export function RefundForm({
           <input
             id="dateSubmission"
             name="dateSubmission"
-            type="text"
-            inputMode="numeric"
-            placeholder="dd/MM/yyyy"
+            type="date"
             className="input"
-            defaultValue={isoToDdMmYyyy(toLocalDate(refund?.dateSubmission ?? null))}
+            defaultValue={toLocalDate(refund?.dateSubmission ?? null)}
           />
         </div>
         <div>
@@ -175,11 +172,9 @@ export function RefundForm({
           <input
             id="dateRefund"
             name="dateRefund"
-            type="text"
-            inputMode="numeric"
-            placeholder="dd/MM/yyyy"
+            type="date"
             className="input"
-            defaultValue={isoToDdMmYyyy(toLocalDate(refund?.dateRefund ?? null))}
+            defaultValue={toLocalDate(refund?.dateRefund ?? null)}
           />
         </div>
         <div className="sm:col-span-2">

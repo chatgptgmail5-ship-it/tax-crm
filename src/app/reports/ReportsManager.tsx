@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FileDown } from "lucide-react";
-import { formatCurrency, formatDate, isoToDdMmYyyy, parseDdMmYyyyToIso } from "@/lib/utils";
+import { formatCurrency, formatDate, isoToDdMmYyyy } from "@/lib/utils";
 
 type ReportType = "1" | "2" | "3";
 type Report2Mode = "submitted" | "received";
@@ -57,8 +57,6 @@ export function ReportsManager() {
   const [reportType, setReportType] = useState<ReportType | "">("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [fromDateInput, setFromDateInput] = useState("");
-  const [toDateInput, setToDateInput] = useState("");
   const [report2Mode, setReport2Mode] = useState<Report2Mode>("submitted");
   const [statusName, setStatusName] = useState("");
   const [rows, setRows] = useState<ReportRow[]>([]);
@@ -194,18 +192,10 @@ export function ReportsManager() {
               <input
                 id="fromDate"
                 name="fromDate"
-                type="text"
-                inputMode="numeric"
-                placeholder="dd/MM/yyyy"
+                type="date"
                 className="input w-full"
-                value={fromDateInput !== "" ? fromDateInput : isoToDdMmYyyy(fromDate)}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setFromDateInput(v);
-                  const iso = parseDdMmYyyyToIso(v);
-                  if (iso) setFromDate(iso);
-                  else if (!v.trim()) setFromDate("");
-                }}
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
               />
             </div>
             <div>
@@ -215,18 +205,10 @@ export function ReportsManager() {
               <input
                 id="toDate"
                 name="toDate"
-                type="text"
-                inputMode="numeric"
-                placeholder="dd/MM/yyyy"
+                type="date"
                 className="input w-full"
-                value={toDateInput !== "" ? toDateInput : isoToDdMmYyyy(toDate)}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setToDateInput(v);
-                  const iso = parseDdMmYyyyToIso(v);
-                  if (iso) setToDate(iso);
-                  else if (!v.trim()) setToDate("");
-                }}
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
               />
             </div>
 

@@ -42,6 +42,18 @@ type Props = {
   household: { persons: { firstName: string | null; lastName: string | null; phone: string | null }[] };
 };
 
+function getResultColorClass(result: string | null): string {
+  if (!result) return "text-ink-900";
+  const trimmed = result.trim();
+  if (trimmed === "לא מגיע") return "text-red-600";
+  const match = trimmed.match(/(\d{1,3})\s*%/);
+  if (!match) return "text-ink-900";
+  const pct = Number(match[1]);
+  if (pct <= 20) return "text-red-600";
+  if (pct <= 70) return "text-amber-600";
+  return "text-emerald-600";
+}
+
 export function RefundQuestionnaireSection({ householdId, household }: Props) {
   const [q, setQ] = useState<Questionnaire | null>(null);
   const [loading, setLoading] = useState(true);
@@ -255,19 +267,25 @@ ${link}`;
               <label className="block font-medium text-ink-700">{idx + 1}. {q.question}</label>
               <p className="text-xs text-ink-500 whitespace-pre-line">* {q.note}</p>
               <div className="flex flex-wrap gap-4">
-                {OPTIONS.map((opt) => (
-                  <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                {OPTIONS.map((opt) => {
+                  const isSelected = answers[q.key] === opt;
+                  return (
+                  <label
+                    key={opt}
+                    className={`flex items-center gap-2 cursor-pointer ${isSelected ? "text-emerald-700 font-semibold" : ""}`}
+                  >
                     <input
                       type="radio"
                       name={q.key}
                       value={opt}
-                      checked={answers[q.key] === opt}
+                      checked={isSelected}
                       onChange={() => editing && setEditAnswers((p) => ({ ...p, [q.key]: opt }))}
                       disabled={!editing}
+                      className={isSelected ? "accent-emerald-600" : ""}
                     />
                     <span>{opt}</span>
                   </label>
-                ))}
+                )})}
               </div>
             </div>
           ))}
@@ -289,7 +307,7 @@ ${link}`;
             </div>
             <div>
               <dt className="text-ink-500">מגיע / לא מגיע החזר</dt>
-              <dd className="font-semibold text-ink-900 mt-0.5">{q?.result ?? "—"}</dd>
+              <dd className={`font-semibold mt-0.5 ${getResultColorClass(q?.result ?? null)}`}>{q?.result ?? "—"}</dd>
             </div>
           </dl>
         </div>
