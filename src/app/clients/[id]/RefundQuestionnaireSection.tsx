@@ -6,8 +6,11 @@ import { formatDateTime } from "@/lib/utils";
 import { ID_FIELDS, OPTIONS, GENDER_OPTIONS, MARITAL_OPTIONS, QUESTION_FIELDS } from "@/lib/questionnaire-fields";
 import { calculateResult } from "@/lib/questionnaire-scoring";
 import { InlineSpinner, SkeletonBlock } from "@/components/InlineSpinner";
+import { useCanEdit } from "@/hooks/useCanEdit";
 
 const PHONE_ERROR = "לא נמצא מספר טלפון ללקוח";
+
+const FINAL_STATUS_OPTIONS = ["קיבל", "לא קיבל"] as const;
 
 function getClientPhone(household: { persons: { phone: string | null }[] }): string | null {
   for (const p of household.persons) {
@@ -17,7 +20,6 @@ function getClientPhone(household: { persons: { phone: string | null }[] }): str
   return null;
 }
 
-/** Normalize phone for wa.me: 052xxxxxxx → 97252xxxxxxx */
 function normalizePhone(rawPhone: string): string | null {
   let phone = rawPhone.replace(/\D/g, "");
   if (!phone) return null;
@@ -39,10 +41,32 @@ type Questionnaire = {
   result: string | null;
 };
 
+type ArchiveRow = {
+  id: number;
+  householdId: number;
+  fullName: string;
+  submittedAt: string;
+  resultText: string | null;
+  finalStatus: string | null;
+  answers: Record<string, string>;
+};
+
 type Props = {
   householdId: number;
-  household: { persons: { firstName: string | null; lastName: string | null; phone: string | null }[] };
+  household: {
+    persons: { firstName: string | null; lastName: string | null; phone: string | null; role: string | null }[];
+  };
 };
+
+function getHouseholdDisplayName(household: Props["household"]): string {
+  const husband = household.persons.find((p) => p.role === "husband");
+  const wife = household.persons.find((p) => p.role === "wife");
+  const primary = husband ?? household.persons[0];
+  const a = primary ? `${primary.firstName ?? ""} ${primary.lastName ?? ""}`.trim() : "";
+  const b = wife ? `${wife.firstName ?? ""} ${wife.lastName ?? ""}`.trim() : "";
+  if (a && b) return `${a} / ${b}`;
+  return a || b || "—";
+}
 
 function getResultColorClass(result: string | null): string {
   if (!result) return "text-ink-900";
@@ -57,12 +81,22 @@ function getResultColorClass(result: string | null): string {
 }
 
 export function RefundQuestionnaireSection({ householdId, household }: Props) {
+  const canEdit = useCanEdit();
   const [q, setQ] = useState<Questionnaire | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editAnswers, setEditAnswers] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+
+  const [archives, setArchives] = useState<ArchiveRow[]>([]);
+  const [archiving, setArchiving] = useState(false);
+  const [focus, setFocus] = useState<"live" | "archive">("live");
+  const [selectedArchive, setSelectedArchive] = useState<ArchiveRow | null>(null);
+  const [archiveEditMode, setArchiveEditMode] = useState(false);
+  const [archiveEditAnswers, setArchiveEditAnswers] = useState<Record<string, string>>({});
+  const [archiveFinalStatus, setArchiveFinalStatus] = useState<string | null>(null);
+  const [archiveSaving, setArchiveSaving] = useState(false);
 
   const fetchLatest = useCallback(async (opts?: { silent?: boolean }) => {
     const silent = opts?.silent === true;
@@ -81,9 +115,33 @@ export function RefundQuestionnaireSection({ householdId, household }: Props) {
     }
   }, [householdId]);
 
+  const fetchArchives = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/crm/questionnaire-archive?householdId=${householdId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setArchives(Array.isArray(data) ? data : []);
+      }
+    } catch {
+      setArchives([]);
+    }
+  }, [householdId]);
+
   useEffect(() => {
     fetchLatest();
   }, [fetchLatest]);
+
+  useEffect(() => {
+    void fetchArchives();
+  }, [fetchArchives]);
+
+  function backToLive() {
+    setFocus("live");
+    setSelectedArchive(null);
+    setArchiveEditMode(false);
+    setArchiveEditAnswers({});
+    setArchiveFinalStatus(null);
+  }
 
   async function handleSend() {
     const clientPhone = getClientPhone(household);
@@ -167,8 +225,89 @@ ${link}`;
     void fetchLatest({ silent: true });
   }
 
-  const answers = editing ? editAnswers : (q?.answers ?? {});
+  async function handleAddToArchive() {
+    if (!q?.dateReceived || !q.answers || Object.keys(q.answers).length === 0) {
+      alert("אין שאלון שהוגש לשמירה בארכיון.");
+      return;
+    }
+    setArchiving(true);
+    try {
+      const res = await fetch("/api/crm/questionnaire-archive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          householdId,
+          fullName: getHouseholdDisplayName(household),
+          submittedAt: q.dateReceived,
+          resultText: q.result ?? calculateResult(q.answers),
+          answers: q.answers,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert((data as { error?: string })?.error ?? "שגיאה בשמירת ארכיון");
+        return;
+      }
+      await fetchArchives();
+    } catch {
+      alert("שגיאה בשמירת ארכיון");
+    } finally {
+      setArchiving(false);
+    }
+  }
+
+  async function handleSaveArchiveEdit() {
+    if (!selectedArchive) return;
+    setArchiveSaving(true);
+    try {
+      const res = await fetch(`/api/crm/questionnaire-archive/${selectedArchive.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          householdId,
+          answers: archiveEditAnswers,
+          finalStatus: archiveFinalStatus && archiveFinalStatus.length > 0 ? archiveFinalStatus : null,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as Partial<ArchiveRow> & { error?: string };
+      if (!res.ok) {
+        alert(data?.error ?? "שגיאה בשמירה");
+        return;
+      }
+      const updated: ArchiveRow = {
+        id: data.id ?? selectedArchive.id,
+        householdId: data.householdId ?? householdId,
+        fullName: data.fullName ?? selectedArchive.fullName,
+        submittedAt: data.submittedAt ?? selectedArchive.submittedAt,
+        resultText: data.resultText ?? null,
+        finalStatus: data.finalStatus ?? null,
+        answers: (data.answers as Record<string, string>) ?? archiveEditAnswers,
+      };
+      setSelectedArchive(updated);
+      setArchiveEditMode(false);
+      await fetchArchives();
+    } catch {
+      alert("שגיאה בשמירה");
+    } finally {
+      setArchiveSaving(false);
+    }
+  }
+
   const isReadOnly = q?.dateReceived != null && !editing;
+  const fieldEditable =
+    focus === "live" ? editing : archiveEditMode;
+  const displayAnswers =
+    focus === "live"
+      ? editing
+        ? editAnswers
+        : (q?.answers ?? {})
+      : archiveEditMode
+        ? archiveEditAnswers
+        : (selectedArchive?.answers ?? {});
+
+  const summaryDateSent = focus === "live" ? q?.dateSent : null;
+  const summaryDateReceived = focus === "live" ? q?.dateReceived : selectedArchive?.submittedAt ?? null;
+  const summaryResult = focus === "live" ? q?.result ?? null : selectedArchive?.resultText ?? null;
 
   if (loading) {
     return (
@@ -194,41 +333,116 @@ ${link}`;
 
   return (
     <div className="flex gap-6 flex-wrap lg:flex-nowrap" dir="rtl">
-      {/* RIGHT — questionnaire (~70%) */}
       <div className="flex-1 min-w-0 order-2 lg:order-1">
         <div className="card p-6 overflow-y-auto max-h-[calc(100vh-12rem)]">
           <div className="flex flex-wrap gap-3 mb-6">
             <button
               type="button"
               onClick={handleSend}
-              disabled={sending || !getClientPhone(household) || !normalizePhone(getClientPhone(household) ?? "")}
+              disabled={
+                focus !== "live" ||
+                sending ||
+                !getClientPhone(household) ||
+                !normalizePhone(getClientPhone(household) ?? "")
+              }
               className="btn btn-primary flex items-center gap-2"
             >
               {sending ? <InlineSpinner className="size-4 text-white" /> : <MessageCircle className="h-4 w-4" />}
               {sending ? "שולח…" : "שלח"}
             </button>
-            {q && isReadOnly && (
-              <button type="button" onClick={() => setEditing(true)} className="btn btn-ghost flex items-center gap-2">
-                <Pencil className="h-4 w-4" />
-                ערוך
-              </button>
+            {focus === "live" && q && isReadOnly && (
+              <>
+                {canEdit && (
+                  <button type="button" onClick={() => setEditing(true)} className="btn btn-ghost flex items-center gap-2">
+                    <Pencil className="h-4 w-4" />
+                    ערוך
+                  </button>
+                )}
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => void handleAddToArchive()}
+                    disabled={archiving}
+                    className="btn btn-secondary flex items-center gap-2 text-sm"
+                  >
+                    {archiving ? <InlineSpinner className="size-4" /> : null}
+                    הכנס לרשימה
+                  </button>
+                )}
+              </>
             )}
-            {editing && (
+            {focus === "live" && editing && canEdit && (
               <>
                 <button type="button" onClick={handleSaveEdit} disabled={saving} className="btn btn-primary">
                   {saving ? <InlineSpinner className="size-4 text-white" /> : null}
                   {saving ? "שומר…" : "שמור"}
                 </button>
-                <button type="button" onClick={() => { setEditing(false); setEditAnswers(q?.answers ?? {}); }} className="btn btn-ghost">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditing(false);
+                    setEditAnswers(q?.answers ?? {});
+                  }}
+                  className="btn btn-ghost"
+                >
                   ביטול
                 </button>
               </>
             )}
+            {focus === "archive" && (
+              <button type="button" onClick={backToLive} className="btn btn-ghost text-sm">
+                חזרה לשאלון נוכחי
+              </button>
+            )}
+            {focus === "archive" && archiveEditMode && canEdit && (
+              <>
+                <button type="button" onClick={() => void handleSaveArchiveEdit()} disabled={archiveSaving} className="btn btn-primary">
+                  {archiveSaving ? <InlineSpinner className="size-4 text-white" /> : null}
+                  {archiveSaving ? "שומר…" : "שמור ארכיון"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setArchiveEditMode(false);
+                    if (selectedArchive) {
+                      setArchiveEditAnswers({ ...selectedArchive.answers });
+                      setArchiveFinalStatus(selectedArchive.finalStatus);
+                    }
+                  }}
+                  className="btn btn-ghost"
+                >
+                  ביטול
+                </button>
+              </>
+            )}
+            {focus === "archive" && archiveEditMode && canEdit && (
+              <label className="flex items-center gap-2 text-sm text-ink-700">
+                <span className="shrink-0">סופי</span>
+                <select
+                  value={archiveFinalStatus ?? ""}
+                  onChange={(e) => setArchiveFinalStatus(e.target.value || null)}
+                  className="input w-auto min-w-[7rem] py-1.5 text-sm"
+                >
+                  <option value="">—</option>
+                  {FINAL_STATUS_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
           </div>
 
-          <h3 className="font-semibold text-ink-800 mb-4">שאלון החזר מס</h3>
+          <h3 className="font-semibold text-ink-800 mb-4">
+            שאלון החזר מס
+            {focus === "archive" ? (
+              <span className="me-2 text-sm font-normal text-amber-700">
+                {archiveEditMode ? "(עריכת ארכיון)" : "(צפייה בארכיון)"}
+              </span>
+            ) : null}
+          </h3>
 
-          {/* Identification — not numbered */}
           <div className="space-y-4 pb-6 border-b border-ink-200 mb-6">
             {ID_FIELDS.map((f) => (
               <div key={f.key} className="space-y-1.5">
@@ -237,18 +451,26 @@ ${link}`;
                 {f.type === "text" && (
                   <input
                     type="text"
-                    value={answers[f.key] ?? ""}
-                    onChange={(e) => editing && setEditAnswers((p) => ({ ...p, [f.key]: e.target.value }))}
-                    readOnly={!editing}
+                    value={displayAnswers[f.key] ?? ""}
+                    onChange={(e) => {
+                      if (!fieldEditable) return;
+                      if (focus === "live") setEditAnswers((p) => ({ ...p, [f.key]: e.target.value }));
+                      else setArchiveEditAnswers((p) => ({ ...p, [f.key]: e.target.value }));
+                    }}
+                    readOnly={!fieldEditable}
                     className="input w-full"
                   />
                 )}
                 {f.type === "date" && (
                   <input
                     type="date"
-                    value={answers[f.key] ?? ""}
-                    onChange={(e) => editing && setEditAnswers((p) => ({ ...p, [f.key]: e.target.value }))}
-                    readOnly={!editing}
+                    value={displayAnswers[f.key] ?? ""}
+                    onChange={(e) => {
+                      if (!fieldEditable) return;
+                      if (focus === "live") setEditAnswers((p) => ({ ...p, [f.key]: e.target.value }));
+                      else setArchiveEditAnswers((p) => ({ ...p, [f.key]: e.target.value }));
+                    }}
+                    readOnly={!fieldEditable}
                     className="input w-full"
                   />
                 )}
@@ -258,11 +480,15 @@ ${link}`;
                       <label key={opt} className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="radio"
-                          name={f.key}
+                          name={`${focus}-${f.key}`}
                           value={opt}
-                          checked={answers[f.key] === opt}
-                          onChange={() => editing && setEditAnswers((p) => ({ ...p, [f.key]: opt }))}
-                          disabled={!editing}
+                          checked={displayAnswers[f.key] === opt}
+                          onChange={() => {
+                            if (!fieldEditable) return;
+                            if (focus === "live") setEditAnswers((p) => ({ ...p, [f.key]: opt }));
+                            else setArchiveEditAnswers((p) => ({ ...p, [f.key]: opt }));
+                          }}
+                          disabled={!fieldEditable}
                         />
                         <span>{opt}</span>
                       </label>
@@ -275,11 +501,15 @@ ${link}`;
                       <label key={opt} className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="radio"
-                          name={f.key}
+                          name={`${focus}-${f.key}`}
                           value={opt}
-                          checked={answers[f.key] === opt}
-                          onChange={() => editing && setEditAnswers((p) => ({ ...p, [f.key]: opt }))}
-                          disabled={!editing}
+                          checked={displayAnswers[f.key] === opt}
+                          onChange={() => {
+                            if (!fieldEditable) return;
+                            if (focus === "live") setEditAnswers((p) => ({ ...p, [f.key]: opt }));
+                            else setArchiveEditAnswers((p) => ({ ...p, [f.key]: opt }));
+                          }}
+                          disabled={!fieldEditable}
                         />
                         <span>{opt}</span>
                       </label>
@@ -290,18 +520,19 @@ ${link}`;
             ))}
           </div>
 
-          {/* Questions 1–16 — numbered */}
-          {QUESTION_FIELDS.map((q, idx) => (
-            <div key={q.key} className="space-y-2 pb-4 border-b border-ink-100 last:border-0 mb-4 last:mb-0">
-              <label className="block font-medium text-ink-700">{idx + 1}. {q.question}</label>
-              <p className="text-xs text-ink-500 whitespace-pre-line">* {q.note}</p>
+          {QUESTION_FIELDS.map((qf, idx) => (
+            <div key={qf.key} className="space-y-2 pb-4 border-b border-ink-100 last:border-0 mb-4 last:mb-0">
+              <label className="block font-medium text-ink-700">
+                {idx + 1}. {qf.question}
+              </label>
+              <p className="text-xs text-ink-500 whitespace-pre-line">* {qf.note}</p>
               <div className="flex flex-col">
                 {OPTIONS.map((opt) => {
-                  const isSelected = answers[q.key] === opt;
+                  const isSelected = displayAnswers[qf.key] === opt;
                   return (
                     <label
                       key={opt}
-                      className={`mb-2 block last:mb-0 ${editing ? "cursor-pointer" : "cursor-default"}`}
+                      className={`mb-2 block last:mb-0 ${fieldEditable ? "cursor-pointer" : "cursor-default"}`}
                     >
                       <div
                         className={`flex items-center gap-3 rounded-[10px] border-2 px-3 py-3 transition-colors ${
@@ -312,19 +543,19 @@ ${link}`;
                       >
                         <input
                           type="radio"
-                          name={q.key}
+                          name={`${focus}-${qf.key}`}
                           value={opt}
                           checked={isSelected}
-                          onChange={() => editing && setEditAnswers((p) => ({ ...p, [q.key]: opt }))}
-                          disabled={!editing}
+                          onChange={() => {
+                            if (!fieldEditable) return;
+                            if (focus === "live") setEditAnswers((p) => ({ ...p, [qf.key]: opt }));
+                            else setArchiveEditAnswers((p) => ({ ...p, [qf.key]: opt }));
+                          }}
+                          disabled={!fieldEditable}
                           style={isSelected ? { accentColor: "#2563eb" } : undefined}
                           className="min-h-[1.25rem] min-w-[1.25rem] shrink-0"
                         />
-                        <span
-                          className={`text-ink-900 ${isSelected ? "font-semibold" : "font-normal"}`}
-                        >
-                          {opt}
-                        </span>
+                        <span className={`text-ink-900 ${isSelected ? "font-semibold" : "font-normal"}`}>{opt}</span>
                       </div>
                     </label>
                   );
@@ -335,30 +566,90 @@ ${link}`;
         </div>
       </div>
 
-      {/* LEFT — summary panel (~30%) */}
-      <div className="w-full lg:w-[30%] min-w-0 order-1 lg:order-2">
+      <div className="w-full lg:w-[30%] min-w-0 order-1 lg:order-2 space-y-4">
         <div className="card p-6">
           <h3 className="font-semibold text-ink-900 mb-4">סיכום</h3>
           <dl className="space-y-4 text-sm" dir="rtl">
             <div className="flex items-baseline justify-between gap-4">
               <dt className="m-0 shrink-0 text-ink-500">תאריך שליחה</dt>
               <dd className="m-0 font-medium tabular-nums text-ink-800">
-                {q?.dateSent ? formatDateTime(q.dateSent) : "—"}
+                {summaryDateSent ? formatDateTime(summaryDateSent) : "—"}
               </dd>
             </div>
             <div className="flex items-baseline justify-between gap-4">
               <dt className="m-0 shrink-0 text-ink-500">תאריך קבלה</dt>
               <dd className="m-0 font-medium tabular-nums text-ink-800">
-                {q?.dateReceived ? formatDateTime(q.dateReceived) : "—"}
+                {summaryDateReceived ? formatDateTime(summaryDateReceived) : "—"}
               </dd>
             </div>
             <div className="flex items-baseline justify-between gap-4">
               <dt className="m-0 shrink-0 text-ink-500">מגיע / לא מגיע החזר</dt>
-              <dd className={`m-0 font-semibold tabular-nums ${getResultColorClass(q?.result ?? null)}`}>
-                {q?.result ?? "—"}
+              <dd className={`m-0 font-semibold tabular-nums ${getResultColorClass(summaryResult)}`}>
+                {summaryResult ?? "—"}
               </dd>
             </div>
           </dl>
+        </div>
+
+        <div className="card p-6 overflow-x-auto">
+          <h4 className="font-semibold text-ink-900 mb-3 text-sm">ארכיון שאלונים</h4>
+          {archives.length === 0 ? (
+            <p className="text-sm text-ink-500">אין רשומות בארכיון.</p>
+          ) : (
+            <table className="w-full min-w-[28rem] text-right text-xs">
+              <thead>
+                <tr className="border-b border-ink-200">
+                  <th className="px-2 py-2 font-medium text-ink-700">שם</th>
+                  <th className="px-2 py-2 font-medium text-ink-700">תאריך</th>
+                  <th className="px-2 py-2 font-medium text-ink-700">מגיע / לא מגיע</th>
+                  <th className="px-2 py-2 font-medium text-ink-700">סופי</th>
+                  <th className="px-2 py-2 font-medium text-ink-700">פעולה</th>
+                </tr>
+              </thead>
+              <tbody>
+                {archives.map((row) => (
+                  <tr key={row.id} className="border-b border-ink-100">
+                    <td className="px-2 py-2 text-ink-800">{row.fullName}</td>
+                    <td className="px-2 py-2 tabular-nums text-ink-600">{formatDateTime(row.submittedAt)}</td>
+                    <td className={`px-2 py-2 font-medium ${getResultColorClass(row.resultText)}`}>
+                      {row.resultText ?? "—"}
+                    </td>
+                    <td className="px-2 py-2 text-ink-600">{row.finalStatus ?? "—"}</td>
+                    <td className="px-2 py-2 whitespace-nowrap">
+                      <button
+                        type="button"
+                        className="text-primary-600 hover:underline ms-2"
+                        onClick={() => {
+                          setFocus("archive");
+                          setSelectedArchive(row);
+                          setArchiveEditMode(false);
+                          setArchiveEditAnswers({ ...row.answers });
+                          setArchiveFinalStatus(row.finalStatus);
+                        }}
+                      >
+                        צפה
+                      </button>
+                      {canEdit ? (
+                        <button
+                          type="button"
+                          className="text-primary-600 hover:underline ms-2"
+                          onClick={() => {
+                            setFocus("archive");
+                            setSelectedArchive(row);
+                            setArchiveEditMode(true);
+                            setArchiveEditAnswers({ ...row.answers });
+                            setArchiveFinalStatus(row.finalStatus);
+                          }}
+                        >
+                          ערוך
+                        </button>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

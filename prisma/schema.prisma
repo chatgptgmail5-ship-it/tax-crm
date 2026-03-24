@@ -87,8 +87,9 @@ model Household {
   fileDocuments           HouseholdFileDocument[]
   importantDates          HouseholdImportantDate[]
   persons                 Person[]
-  taxCases                TaxCase[]
-  taxRefundQuestionnaires TaxRefundQuestionnaire[]
+  taxCases                       TaxCase[]
+  taxRefundQuestionnaires        TaxRefundQuestionnaire[]
+  taxRefundQuestionnaireArchives TaxRefundQuestionnaireArchive[]
 }
 
 model TaxRefundQuestionnaire {
@@ -102,6 +103,21 @@ model TaxRefundQuestionnaire {
   /// When staff last opened the questionnaire tab in CRM for this row (null = never).
   viewedInCRMAt   DateTime? @map("viewed_in_crm_at")
   household       Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}
+
+/// CRM-only snapshots of a submitted questionnaire (does not replace the live questionnaire row).
+model TaxRefundQuestionnaireArchive {
+  id           Int       @id @default(autoincrement())
+  householdId  Int       @map("household_id")
+  fullName     String    @map("full_name")
+  submittedAt  DateTime  @map("submitted_at")
+  resultText   String?   @map("result_text")
+  finalStatus  String?   @map("final_status")
+  answers      String    @map("answers")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  household    Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@index([householdId])
 }
 
 model HouseholdActivity {
