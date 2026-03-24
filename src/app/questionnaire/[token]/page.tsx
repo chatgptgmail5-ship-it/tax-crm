@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { ID_FIELDS, OPTIONS, GENDER_OPTIONS, MARITAL_OPTIONS, NUM_QUESTIONS } from "@/lib/questionnaire-fields";
+import { ID_FIELDS, OPTIONS, GENDER_OPTIONS, MARITAL_OPTIONS, QUESTION_FIELDS } from "@/lib/questionnaire-fields";
 
 export default function QuestionnairePage() {
   const params = useParams();
@@ -136,18 +136,19 @@ export default function QuestionnairePage() {
           </div>
 
           {/* Questions 1–16 — numbered */}
-          {Array.from({ length: NUM_QUESTIONS }, (_, i) => i + 1).map((q) => (
-            <div key={q} className="space-y-3 py-4 border-b border-slate-100 last:border-0">
-              <label className={`${labelCls} mt-2`}>{q}. האם אתה או בן/בת זוגך...</label>
+          {QUESTION_FIELDS.map((q, idx) => (
+            <div key={q.key} className="space-y-3 py-4 border-b border-slate-100 last:border-0">
+              <label className={`${labelCls} mt-2`}>{idx + 1}. {q.question}</label>
+              <p className="text-sm text-slate-600 whitespace-pre-line">* {q.note}</p>
               <div className="flex flex-col gap-2">
                 {OPTIONS.map((opt) => (
                   <label key={opt} className={radioLabelCls}>
                     <input
                       type="radio"
-                      name={`q${q}`}
+                      name={q.key}
                       value={opt}
-                      checked={answers[`q${q}`] === opt}
-                      onChange={() => setQuestionAnswer(q, opt)}
+                      checked={answers[q.key] === opt}
+                      onChange={() => setAnswer(q.key, opt)}
                       className={radioCls}
                     />
                     <span className="text-base">{opt}</span>

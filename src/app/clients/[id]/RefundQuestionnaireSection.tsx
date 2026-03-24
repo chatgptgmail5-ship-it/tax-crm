@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { MessageCircle, Pencil } from "lucide-react";
 import { formatDate } from "@/lib/utils";
-import { ID_FIELDS, OPTIONS, GENDER_OPTIONS, MARITAL_OPTIONS, NUM_QUESTIONS } from "@/lib/questionnaire-fields";
+import { ID_FIELDS, OPTIONS, GENDER_OPTIONS, MARITAL_OPTIONS, QUESTION_FIELDS } from "@/lib/questionnaire-fields";
 
 const PHONE_ERROR = "לא נמצא מספר טלפון ללקוח";
 
@@ -250,18 +250,19 @@ ${link}`;
           </div>
 
           {/* Questions 1–16 — numbered */}
-          {Array.from({ length: NUM_QUESTIONS }, (_, i) => i + 1).map((qn) => (
-            <div key={qn} className="space-y-2 pb-4 border-b border-ink-100 last:border-0 mb-4 last:mb-0">
-              <label className="block font-medium text-ink-700">{qn}. האם אתה או בן/בת זוגך...</label>
+          {QUESTION_FIELDS.map((q, idx) => (
+            <div key={q.key} className="space-y-2 pb-4 border-b border-ink-100 last:border-0 mb-4 last:mb-0">
+              <label className="block font-medium text-ink-700">{idx + 1}. {q.question}</label>
+              <p className="text-xs text-ink-500 whitespace-pre-line">* {q.note}</p>
               <div className="flex flex-wrap gap-4">
                 {OPTIONS.map((opt) => (
                   <label key={opt} className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
-                      name={`q${qn}`}
+                      name={q.key}
                       value={opt}
-                      checked={answers[`q${qn}`] === opt}
-                      onChange={() => editing && setEditAnswers((p) => ({ ...p, [`q${qn}`]: opt }))}
+                      checked={answers[q.key] === opt}
+                      onChange={() => editing && setEditAnswers((p) => ({ ...p, [q.key]: opt }))}
                       disabled={!editing}
                     />
                     <span>{opt}</span>
