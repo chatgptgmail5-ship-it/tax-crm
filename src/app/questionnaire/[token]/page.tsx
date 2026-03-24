@@ -140,21 +140,32 @@ export default function QuestionnairePage() {
             <div key={q.key} className="space-y-3 py-4 border-b border-slate-100 last:border-0">
               <label className={`${labelCls} mt-2`}>{idx + 1}. {q.question}</label>
               <p className="text-sm text-slate-600 whitespace-pre-line">* {q.note}</p>
-              <div className="flex flex-col gap-2">
-                {OPTIONS.map((opt) => (
-                  <label key={opt} className={radioLabelCls}>
-                    <input
-                      type="radio"
-                      name={q.key}
-                      value={opt}
-                      checked={answers[q.key] === opt}
-                      onChange={() => setAnswer(q.key, opt)}
-                      className={radioCls}
-                      style={answers[q.key] === opt ? { accentColor: "#166534" } : undefined}
-                    />
-                    <span className="text-base">{opt}</span>
-                  </label>
-                ))}
+              <div className="flex flex-col">
+                {OPTIONS.map((opt) => {
+                  const isSelected = answers[q.key] === opt;
+                  return (
+                    <label key={opt} className="mb-2 block cursor-pointer last:mb-0">
+                      <div
+                        className={`flex items-center gap-3 rounded-[10px] border px-3 py-3 transition-colors ${
+                          isSelected
+                            ? "border-[#166534] bg-[#f0fdf4]"
+                            : "border-black bg-white hover:bg-emerald-50/40"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name={q.key}
+                          value={opt}
+                          checked={isSelected}
+                          onChange={() => setAnswer(q.key, opt)}
+                          className={radioCls}
+                          style={isSelected ? { accentColor: "#166534" } : undefined}
+                        />
+                        <span className="text-base text-slate-800">{opt}</span>
+                      </div>
+                    </label>
+                  );
+                })}
               </div>
             </div>
           ))}

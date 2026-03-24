@@ -266,26 +266,36 @@ ${link}`;
             <div key={q.key} className="space-y-2 pb-4 border-b border-ink-100 last:border-0 mb-4 last:mb-0">
               <label className="block font-medium text-ink-700">{idx + 1}. {q.question}</label>
               <p className="text-xs text-ink-500 whitespace-pre-line">* {q.note}</p>
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-col">
                 {OPTIONS.map((opt) => {
                   const isSelected = answers[q.key] === opt;
                   return (
-                  <label
-                    key={opt}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <input
-                      type="radio"
-                      name={q.key}
-                      value={opt}
-                      checked={isSelected}
-                      onChange={() => editing && setEditAnswers((p) => ({ ...p, [q.key]: opt }))}
-                      disabled={!editing}
-                      style={isSelected ? { accentColor: "#166534" } : undefined}
-                    />
-                    <span>{opt}</span>
-                  </label>
-                )})}
+                    <label
+                      key={opt}
+                      className={`mb-2 block last:mb-0 ${editing ? "cursor-pointer" : "cursor-default"}`}
+                    >
+                      <div
+                        className={`flex items-center gap-3 rounded-[10px] border px-3 py-3 transition-colors ${
+                          isSelected
+                            ? "border-[#166534] bg-[#f0fdf4]"
+                            : "border-black bg-white hover:bg-emerald-50/40"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name={q.key}
+                          value={opt}
+                          checked={isSelected}
+                          onChange={() => editing && setEditAnswers((p) => ({ ...p, [q.key]: opt }))}
+                          disabled={!editing}
+                          style={isSelected ? { accentColor: "#166534" } : undefined}
+                          className="min-h-[1.25rem] min-w-[1.25rem] shrink-0"
+                        />
+                        <span className="text-ink-800">{opt}</span>
+                      </div>
+                    </label>
+                  );
+                })}
               </div>
             </div>
           ))}
