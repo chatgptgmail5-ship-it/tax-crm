@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
@@ -99,6 +99,41 @@ function WhatsAppIcon(props: { className?: string }) {
   );
 }
 
+/** Case-insensitive partial match across displayed + related fields (frontend only). */
+function householdMatchesSearch(h: Household, queryRaw: string): boolean {
+  const query = queryRaw.trim().toLowerCase();
+  if (!query) return true;
+
+  const chunks: string[] = [
+    getRegisteredPartnerName(h),
+    getRegisteredPartnerId(h),
+    getSpouseName(h),
+    getSpouseId(h),
+    getMaritalStatus(h),
+    getPhone(h),
+    h.agent?.name ?? "",
+    h.generalStatus ?? "",
+    h.internalId ?? "",
+  ];
+  for (const p of h.persons) {
+    chunks.push(
+      p.firstName ?? "",
+      p.lastName ?? "",
+      p.idNumber ?? "",
+      p.phone ?? "",
+      p.email ?? ""
+    );
+  }
+  const haystack = chunks.join(" ").toLowerCase();
+  if (haystack.includes(query)) return true;
+  const digitsNeedle = query.replace(/\D/g, "");
+  if (digitsNeedle.length > 0) {
+    const digitHay = chunks.join(" ").replace(/\D/g, "");
+    if (digitHay.includes(digitsNeedle)) return true;
+  }
+  return false;
+}
+
 function StatusBadge({ status }: { status: string | null }) {
   if (!status) return <span className="text-ink-500">—</span>;
   const colorMap: Record<string, string> = {
@@ -118,39 +153,42 @@ function StatusBadge({ status }: { status: string | null }) {
 
 export function ClientsList() {
   const { unreadHouseholdIds } = useQuestionnaireNotifications();
+  const unreadSet = useMemo(() => new Set(unreadHouseholdIds), [unreadHouseholdIds]);
   const canEdit = useCanEdit();
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [pendingClientId, setPendingClientId] = useState<number | null>(null);
-  const [households, setHouseholds] = useState<Household[]>([]);
+  const [allHouseholds, setAllHouseholds] = useState<Household[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [notificationsOnly, setNotificationsOnly] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-    const q = search.trim();
-    const delayMs = q ? 300 : 0;
-    const ac = new AbortController();
-    const timer = window.setTimeout(async () => {
+    (async () => {
       try {
-        const url = q ? `/api/households?q=${encodeURIComponent(q)}` : "/api/households";
-        const res = await fetch(url, { signal: ac.signal });
+        const res = await fetch("/api/households");
         const data = await res.json();
-        if (!ac.signal.aborted) {
-          setHouseholds(Array.isArray(data) ? data : []);
-        }
-      } catch (e) {
-        if ((e as Error).name === "AbortError" || ac.signal.aborted) return;
-        setHouseholds([]);
+        if (!cancelled) setAllHouseholds(Array.isArray(data) ? data : []);
+      } catch {
+        if (!cancelled) setAllHouseholds([]);
       } finally {
-        if (!ac.signal.aborted) setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    }, delayMs);
+    })();
     return () => {
-      clearTimeout(timer);
-      ac.abort();
+      cancelled = true;
     };
-  }, [search]);
+  }, []);
+
+  const filteredHouseholds = useMemo(() => {
+    let list = allHouseholds;
+    if (notificationsOnly) {
+      list = list.filter((h) => unreadSet.has(h.id));
+    }
+    return list.filter((h) => householdMatchesSearch(h, search));
+  }, [allHouseholds, notificationsOnly, search, unreadSet]);
 
   function goToClient(id: number) {
     setPendingClientId(id);
@@ -167,10 +205,21 @@ export function ClientsList() {
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="חיפוש לקוח..."
+          placeholder="חיפוש: שם, ת.ז., בן/בת זוג, מצב משפחתי, טלפון, סוכן, שלב תיק..."
           className="input pr-9"
           autoComplete="off"
         />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setNotificationsOnly((v) => !v)}
+          className="btn btn-secondary text-sm"
+          aria-pressed={notificationsOnly}
+        >
+          {notificationsOnly ? "רגיל" : "התראות"}
+        </button>
       </div>
 
       <div className="card overflow-hidden">
@@ -204,19 +253,25 @@ export function ClientsList() {
                     טוען...
                   </td>
                 </tr>
-              ) : households.length === 0 ? (
+              ) : filteredHouseholds.length === 0 ? (
                 <tr>
                   <td colSpan={11} className="px-6 py-12 text-center text-ink-500">
-                    לא נמצאו לקוחות.{" "}
-                    {canEdit && (
-                      <Link href="/clients/new" className="text-primary-600 hover:underline">
-                        הוסף לקוח
-                      </Link>
+                    {allHouseholds.length === 0 ? (
+                      <>
+                        לא נמצאו לקוחות.{" "}
+                        {canEdit && (
+                          <Link href="/clients/new" className="text-primary-600 hover:underline">
+                            הוסף לקוח
+                          </Link>
+                        )}
+                      </>
+                    ) : (
+                      "לא נמצאו תוצאות."
                     )}
                   </td>
                 </tr>
               ) : (
-                households.map((h) => (
+                filteredHouseholds.map((h) => (
                   <tr
                     key={h.id}
                     className={cn(
@@ -230,7 +285,7 @@ export function ClientsList() {
                   >
                     <td className="px-6 py-4 text-center">
                       <span className="inline-flex items-center justify-center gap-1.5">
-                        {unreadHouseholdIds.includes(h.id) ? (
+                        {unreadSet.has(h.id) ? (
                           <span
                             className="h-2 w-2 shrink-0 rounded-full bg-amber-400"
                             title="שאלון חדש"
