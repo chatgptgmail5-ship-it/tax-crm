@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { useCanEdit } from "@/hooks/useCanEdit";
 import { cn } from "@/lib/utils";
-import { useQuestionnaireUnread } from "@/contexts/QuestionnaireUnreadContext";
 
 type Household = {
   id: number;
@@ -118,7 +117,6 @@ function StatusBadge({ status }: { status: string | null }) {
 
 export function ClientsList() {
   const canEdit = useCanEdit();
-  const { unreadHouseholdIds } = useQuestionnaireUnread();
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [pendingClientId, setPendingClientId] = useState<number | null>(null);
@@ -229,23 +227,14 @@ export function ClientsList() {
                     }}
                   >
                     <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center justify-center gap-1.5">
-                        <Link
-                          href={`/clients/${h.id}`}
-                          prefetch
-                          onClick={() => setPendingClientId(h.id)}
-                          className="font-medium text-primary-700 hover:text-primary-600 hover:underline"
-                        >
-                          {getRegisteredPartnerName(h)}
-                        </Link>
-                        {unreadHouseholdIds.has(h.id) ? (
-                          <span
-                            className="h-2 w-2 shrink-0 rounded-full bg-amber-400"
-                            title="שאלון חדש התקבל"
-                            aria-hidden
-                          />
-                        ) : null}
-                      </span>
+                      <Link
+                        href={`/clients/${h.id}`}
+                        prefetch
+                        onClick={() => setPendingClientId(h.id)}
+                        className="font-medium text-primary-700 hover:text-primary-600 hover:underline"
+                      >
+                        {getRegisteredPartnerName(h)}
+                      </Link>
                     </td>
                     <td className="px-6 py-4 text-ink-600 text-center">{getRegisteredPartnerId(h)}</td>
                     <td className="px-6 py-4 text-ink-600 text-center">{getSpouseName(h)}</td>

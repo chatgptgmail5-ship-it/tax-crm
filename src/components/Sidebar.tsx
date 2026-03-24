@@ -15,11 +15,9 @@ import {
   FileStack,
   Shield,
   LogOut,
-  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
-import { useQuestionnaireUnread } from "@/contexts/QuestionnaireUnreadContext";
 
 const nav = [
   { href: "/", label: "לוח בקרה", icon: LayoutDashboard },
@@ -34,7 +32,6 @@ const nav = [
 export function Sidebar({ className }: { className?: string }) {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const { count: questionnaireUnreadCount } = useQuestionnaireUnread();
 
   return (
     <aside className={cn("flex w-56 shrink-0 flex-col border-e border-ink-200 bg-white", className)}>
@@ -69,9 +66,6 @@ export function Sidebar({ className }: { className?: string }) {
             >
               <Icon className="h-4 w-4" />
               {item.label}
-              {item.href === "/clients" && questionnaireUnreadCount > 0 ? (
-                <Bell className="h-3.5 w-3.5 shrink-0 text-amber-600 opacity-90" aria-label="שאלונים חדשים" title="שאלונים חדשים" />
-              ) : null}
             </Link>
           );
         })}

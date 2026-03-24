@@ -92,16 +92,14 @@ model Household {
 }
 
 model TaxRefundQuestionnaire {
-  id             Int       @id @default(autoincrement())
-  householdId    Int       @map("household_id")
-  token          String    @unique
-  dateSent       DateTime  @map("date_sent")
-  dateReceived   DateTime? @map("date_received")
-  answers        String?   @map("answers")
-  result         String?   @map("result")
-  /// When false and dateReceived is set, CRM should show "new submission" until staff opens the questionnaire tab.
-  isViewedInCRM  Boolean   @default(false) @map("is_viewed_in_crm")
-  household      Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  id           Int       @id @default(autoincrement())
+  householdId  Int       @map("household_id")
+  token        String    @unique
+  dateSent     DateTime  @map("date_sent")
+  dateReceived DateTime? @map("date_received")
+  answers      String?   @map("answers")
+  result       String?   @map("result")
+  household    Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 }
 
 model HouseholdActivity {

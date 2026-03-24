@@ -6,7 +6,6 @@ import { formatDateTime } from "@/lib/utils";
 import { ID_FIELDS, OPTIONS, GENDER_OPTIONS, MARITAL_OPTIONS, QUESTION_FIELDS } from "@/lib/questionnaire-fields";
 import { calculateResult } from "@/lib/questionnaire-scoring";
 import { InlineSpinner, SkeletonBlock } from "@/components/InlineSpinner";
-import { useQuestionnaireUnread } from "@/contexts/QuestionnaireUnreadContext";
 
 const PHONE_ERROR = "לא נמצא מספר טלפון ללקוח";
 
@@ -58,7 +57,6 @@ function getResultColorClass(result: string | null): string {
 }
 
 export function RefundQuestionnaireSection({ householdId, household }: Props) {
-  const { refetch: refetchUnread } = useQuestionnaireUnread();
   const [q, setQ] = useState<Questionnaire | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -85,29 +83,6 @@ export function RefundQuestionnaireSection({ householdId, household }: Props) {
 
   useEffect(() => {
     fetchLatest();
-  }, [fetchLatest]);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        await fetch("/api/questionnaire/mark-viewed", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ householdId }),
-        });
-      } finally {
-        if (!cancelled) void refetchUnread();
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [householdId, refetchUnread]);
-
-  useEffect(() => {
-    const id = window.setInterval(() => void fetchLatest({ silent: true }), 6000);
-    return () => clearInterval(id);
   }, [fetchLatest]);
 
   async function handleSend() {
