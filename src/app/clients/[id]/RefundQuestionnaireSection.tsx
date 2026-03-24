@@ -304,9 +304,9 @@ ${link}`;
                       className={`mb-2 block last:mb-0 ${editing ? "cursor-pointer" : "cursor-default"}`}
                     >
                       <div
-                        className={`flex items-center gap-3 rounded-[10px] border px-3 py-3 transition-colors ${
+                        className={`flex items-center gap-3 rounded-[10px] border-2 px-3 py-3 transition-colors ${
                           isSelected
-                            ? "border-[#2563eb] bg-[#eff6ff]"
+                            ? "border-[#1d4ed8] bg-[#dbeafe]"
                             : "border-black bg-white hover:bg-blue-50/70"
                         }`}
                       >
@@ -320,7 +320,11 @@ ${link}`;
                           style={isSelected ? { accentColor: "#2563eb" } : undefined}
                           className="min-h-[1.25rem] min-w-[1.25rem] shrink-0"
                         />
-                        <span className="text-ink-800">{opt}</span>
+                        <span
+                          className={`text-ink-900 ${isSelected ? "font-semibold" : "font-normal"}`}
+                        >
+                          {opt}
+                        </span>
                       </div>
                     </label>
                   );

@@ -147,9 +147,9 @@ export default function QuestionnairePage() {
                   return (
                     <label key={opt} className="mb-2 block cursor-pointer last:mb-0">
                       <div
-                        className={`flex items-center gap-3 rounded-[10px] border px-3 py-3 transition-colors ${
+                        className={`flex items-center gap-3 rounded-[10px] border-2 px-3 py-3 transition-colors ${
                           isSelected
-                            ? "border-[#2563eb] bg-[#eff6ff]"
+                            ? "border-[#1d4ed8] bg-[#dbeafe]"
                             : "border-black bg-white hover:bg-blue-50/70"
                         }`}
                       >
@@ -160,9 +160,13 @@ export default function QuestionnairePage() {
                           checked={isSelected}
                           onChange={() => setAnswer(q.key, opt)}
                           className={radioCls}
-                          style={isSelected ? { accentColor: "#2563eb" } : undefined}
+                          style={isSelected ? { accentColor: "#1d4ed8" } : undefined}
                         />
-                        <span className="text-base text-slate-800">{opt}</span>
+                        <span
+                          className={`text-base text-slate-900 ${isSelected ? "font-semibold" : "font-normal"}`}
+                        >
+                          {opt}
+                        </span>
                       </div>
                     </label>
                   );
