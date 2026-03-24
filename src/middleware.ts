@@ -17,11 +17,12 @@ export const config = {
      * Match all paths except:
      * - /login
      * - /setup
+     * - /questionnaire/* (public client form; link shared via WhatsApp)
      * - /api/auth (NextAuth)
-     * - _next/static
-     * - _next/image
-     * - favicon.ico
+     * - /api/setup (bootstrap)
+     * - /api/questionnaire/submit (public; token in body)
+     * - _next/static, _next/image, favicon, logo
      */
-    "/((?!login|setup|api/auth|api/setup|_next|favicon\\.ico|logo\\.png).*)",
+    "/((?!login|setup|questionnaire|api/auth|api/setup|api/questionnaire/submit|_next|favicon\\.ico|logo\\.png).*)",
   ],
 };
