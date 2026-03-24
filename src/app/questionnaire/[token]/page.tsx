@@ -150,6 +150,7 @@ export default function QuestionnairePage() {
                       checked={answers[q.key] === opt}
                       onChange={() => setAnswer(q.key, opt)}
                       className={radioCls}
+                      style={answers[q.key] === opt ? { accentColor: "#166534" } : undefined}
                     />
                     <span className="text-base">{opt}</span>
                   </label>

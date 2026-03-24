@@ -272,7 +272,7 @@ ${link}`;
                   return (
                   <label
                     key={opt}
-                    className={`flex items-center gap-2 cursor-pointer ${isSelected ? "text-emerald-700 font-semibold" : ""}`}
+                    className="flex items-center gap-2 cursor-pointer"
                   >
                     <input
                       type="radio"
@@ -281,7 +281,7 @@ ${link}`;
                       checked={isSelected}
                       onChange={() => editing && setEditAnswers((p) => ({ ...p, [q.key]: opt }))}
                       disabled={!editing}
-                      className={isSelected ? "accent-emerald-600" : ""}
+                      style={isSelected ? { accentColor: "#166534" } : undefined}
                     />
                     <span>{opt}</span>
                   </label>
