@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { useEffect } from "react";
 import { Sidebar } from "./Sidebar";
 import { InlineSpinner } from "./InlineSpinner";
-import { QuestionnaireUnreadProvider } from "./QuestionnaireUnreadContext";
+import { QuestionnaireNotificationsProvider } from "@/contexts/QuestionnaireNotificationsContext";
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -58,11 +58,11 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <QuestionnaireUnreadProvider>
+    <QuestionnaireNotificationsProvider>
       <div className="flex min-h-screen">
         <Sidebar className="print:hidden" />
         <main className="min-w-0 flex-1 overflow-auto bg-ink-50 p-6 lg:p-8 print:p-0 print:bg-white">{children}</main>
       </div>
-    </QuestionnaireUnreadProvider>
+    </QuestionnaireNotificationsProvider>
   );
 }

@@ -99,7 +99,8 @@ model TaxRefundQuestionnaire {
   dateReceived    DateTime? @map("date_received")
   answers         String?   @map("answers")
   result          String?   @map("result")
-  isViewedInCRM   Boolean   @default(false) @map("is_viewed_in_crm")
+  /// When staff last opened the questionnaire tab in CRM for this row (null = never).
+  viewedInCRMAt   DateTime? @map("viewed_in_crm_at")
   household       Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 }
 

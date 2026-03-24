@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { useCanEdit } from "@/hooks/useCanEdit";
+import { useQuestionnaireNotifications } from "@/contexts/QuestionnaireNotificationsContext";
 import { cn } from "@/lib/utils";
-import { useQuestionnaireUnread } from "@/components/QuestionnaireUnreadContext";
 
 type Household = {
   id: number;
@@ -117,8 +117,8 @@ function StatusBadge({ status }: { status: string | null }) {
 }
 
 export function ClientsList() {
+  const { unreadHouseholdIds } = useQuestionnaireNotifications();
   const canEdit = useCanEdit();
-  const { unreadHouseholdIds } = useQuestionnaireUnread();
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [pendingClientId, setPendingClientId] = useState<number | null>(null);
@@ -230,9 +230,9 @@ export function ClientsList() {
                   >
                     <td className="px-6 py-4 text-center">
                       <span className="inline-flex items-center justify-center gap-1.5">
-                        {unreadHouseholdIds.has(h.id) ? (
+                        {unreadHouseholdIds.includes(h.id) ? (
                           <span
-                            className="size-1.5 shrink-0 rounded-full bg-amber-400"
+                            className="h-2 w-2 shrink-0 rounded-full bg-amber-400"
                             title="שאלון חדש"
                             aria-hidden
                           />

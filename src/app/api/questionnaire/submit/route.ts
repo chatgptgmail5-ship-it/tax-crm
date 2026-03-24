@@ -22,7 +22,6 @@ export async function POST(req: NextRequest) {
         dateReceived: new Date(),
         answers: JSON.stringify(answers),
         result,
-        isViewedInCRM: false,
       },
     });
     return NextResponse.json({ ok: true, result });

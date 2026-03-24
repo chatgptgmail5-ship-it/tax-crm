@@ -1,8 +1,9 @@
 // @ts-nocheck
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCanEdit } from "@/hooks/useCanEdit";
+import { useQuestionnaireNotifications } from "@/contexts/QuestionnaireNotificationsContext";
 import { CanEditGate } from "@/components/CanEditGate";
 import Link from "next/link";
 import {
@@ -24,7 +25,6 @@ import { ImportantDatesSection } from "./ImportantDatesSection";
 import { ActivitySection } from "./ActivitySection";
 import { RefundQuestionnaireSection } from "./RefundQuestionnaireSection";
 import { FileQuestion } from "lucide-react";
-import { useQuestionnaireUnread } from "@/components/QuestionnaireUnreadContext";
 
 const TABS = [
   { id: "info", label: "מידע ראשי", icon: User },
@@ -123,8 +123,14 @@ type Props = {
 export function ClientProfile({ household, agents, clerks, documents, caseStatuses, clientRefunds, commissionByClientId }: Props) {
   const [tab, setTab] = useState("info");
   const canEdit = useCanEdit();
-  const { unreadHouseholdIds } = useQuestionnaireUnread();
-  const questionnaireUnread = unreadHouseholdIds.has(household.id);
+  const { unreadHouseholdIds, markViewed } = useQuestionnaireNotifications();
+  const questionnaireUnread = unreadHouseholdIds.includes(household.id);
+
+  useEffect(() => {
+    if (tab === "questionnaire") {
+      void markViewed(household.id);
+    }
+  }, [tab, household.id, markViewed]);
 
   const husband = household.persons.find((p) => p.role === "husband");
   const wife = household.persons.find((p) => p.role === "wife");
@@ -165,7 +171,7 @@ export function ClientProfile({ household, agents, clerks, documents, caseStatus
               <Icon className="h-4 w-4" />
               {t.label}
               {t.id === "questionnaire" && questionnaireUnread ? (
-                <span className="size-1.5 shrink-0 rounded-full bg-amber-400" title="שאלון חדש" aria-hidden />
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" title="שאלון חדש" aria-hidden />
               ) : null}
             </button>
           );
