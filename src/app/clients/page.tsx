@@ -17,7 +17,7 @@ export default function ClientsPage() {
         <div className="flex items-center gap-2">
           <ExportExcelButton type="all" />
           <CanEditGate>
-            <Link href="/clients/new" className="btn btn-primary flex items-center gap-2">
+            <Link href="/clients/new" prefetch className="btn btn-primary flex items-center gap-2">
               <Plus className="h-4 w-4" />
               הוסף לקוח
             </Link>

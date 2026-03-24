@@ -36,7 +36,7 @@ export function Sidebar({ className }: { className?: string }) {
   return (
     <aside className={cn("flex w-56 shrink-0 flex-col border-e border-ink-200 bg-white", className)}>
       <div className="flex h-14 items-center border-b border-ink-200 px-4">
-        <Link href="/" className="flex items-center gap-2 font-semibold text-ink-900">
+        <Link href="/" prefetch className="flex items-center gap-2 font-semibold text-ink-900">
           <span className="relative h-8 w-8 shrink-0">
             <Image
               src="/logo.png"
@@ -58,6 +58,7 @@ export function Sidebar({ className }: { className?: string }) {
             <Link
               key={item.href}
               href={item.href}
+              prefetch
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 active ? "bg-primary-50 text-primary-700" : "text-ink-600 hover:bg-primary-50 hover:text-primary-700"
@@ -70,6 +71,7 @@ export function Sidebar({ className }: { className?: string }) {
         })}
         <Link
           href="/users"
+          prefetch
           className={cn(
             "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
             pathname === "/users" ? "bg-primary-50 text-primary-700" : "text-ink-600 hover:bg-primary-50 hover:text-primary-700"

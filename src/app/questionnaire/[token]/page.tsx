@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { ID_FIELDS, OPTIONS, GENDER_OPTIONS, MARITAL_OPTIONS, QUESTION_FIELDS } from "@/lib/questionnaire-fields";
+import { InlineSpinner } from "@/components/InlineSpinner";
 
 export default function QuestionnairePage() {
   const params = useParams();
@@ -176,9 +177,16 @@ export default function QuestionnairePage() {
             type="button"
             onClick={handleSubmit}
             disabled={submitting}
-            className="w-full min-h-[52px] px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white font-semibold text-lg rounded-lg disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.99]"
+            className="inline-flex w-full min-h-[52px] items-center justify-center gap-2 px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white font-semibold text-lg rounded-lg disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.99]"
           >
-            {submitting ? "שולח…" : "סיים"}
+            {submitting ? (
+              <>
+                <InlineSpinner className="size-5 text-white" />
+                שולח…
+              </>
+            ) : (
+              "סיים"
+            )}
           </button>
         </div>
       </div>

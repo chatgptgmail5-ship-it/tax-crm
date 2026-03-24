@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { useCanEdit } from "@/hooks/useCanEdit";
+import { cn } from "@/lib/utils";
 
 type Household = {
   id: number;
@@ -115,23 +117,45 @@ function StatusBadge({ status }: { status: string | null }) {
 
 export function ClientsList() {
   const canEdit = useCanEdit();
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  const [pendingClientId, setPendingClientId] = useState<number | null>(null);
   const [households, setHouseholds] = useState<Household[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  const fetchHouseholds = useCallback(async () => {
+  useEffect(() => {
     setLoading(true);
-    const url = search ? `/api/households?q=${encodeURIComponent(search)}` : "/api/households";
-    const res = await fetch(url);
-    const data = await res.json();
-    setHouseholds(Array.isArray(data) ? data : []);
-    setLoading(false);
+    const q = search.trim();
+    const delayMs = q ? 300 : 0;
+    const ac = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        const url = q ? `/api/households?q=${encodeURIComponent(q)}` : "/api/households";
+        const res = await fetch(url, { signal: ac.signal });
+        const data = await res.json();
+        if (!ac.signal.aborted) {
+          setHouseholds(Array.isArray(data) ? data : []);
+        }
+      } catch (e) {
+        if ((e as Error).name === "AbortError" || ac.signal.aborted) return;
+        setHouseholds([]);
+      } finally {
+        if (!ac.signal.aborted) setLoading(false);
+      }
+    }, delayMs);
+    return () => {
+      clearTimeout(timer);
+      ac.abort();
+    };
   }, [search]);
 
-  useEffect(() => {
-    const t = setTimeout(fetchHouseholds, search ? 300 : 0);
-    return () => clearTimeout(t);
-  }, [search, fetchHouseholds]);
+  function goToClient(id: number) {
+    setPendingClientId(id);
+    startTransition(() => {
+      router.push(`/clients/${id}`);
+    });
+  }
 
   return (
     <div className="space-y-4">
@@ -191,10 +215,22 @@ export function ClientsList() {
                 </tr>
               ) : (
                 households.map((h) => (
-                  <tr key={h.id} className="border-b border-ink-100 transition-colors hover:bg-primary-50/50">
+                  <tr
+                    key={h.id}
+                    className={cn(
+                      "cursor-pointer border-b border-ink-100 transition-colors hover:bg-primary-50/50",
+                      pendingClientId === h.id && "bg-primary-50/70"
+                    )}
+                    onClick={(e) => {
+                      if ((e.target as HTMLElement).closest("a[href], button")) return;
+                      goToClient(h.id);
+                    }}
+                  >
                     <td className="px-6 py-4 text-center">
                       <Link
                         href={`/clients/${h.id}`}
+                        prefetch
+                        onClick={() => setPendingClientId(h.id)}
                         className="font-medium text-primary-700 hover:text-primary-600 hover:underline"
                       >
                         {getRegisteredPartnerName(h)}
@@ -244,7 +280,12 @@ export function ClientsList() {
                       })()}
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <Link href={`/clients/${h.id}`} className="text-primary-600 hover:underline">
+                      <Link
+                        href={`/clients/${h.id}`}
+                        prefetch
+                        onClick={() => setPendingClientId(h.id)}
+                        className="text-primary-600 hover:underline"
+                      >
                         צפה
                       </Link>
                     </td>

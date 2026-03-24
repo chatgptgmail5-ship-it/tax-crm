@@ -16,12 +16,16 @@ export default async function ClientProfilePage({
   const household = await prisma.household.findUnique({
     where: { id: householdId },
     include: {
-      agent: true,
-      clerk: true,
+      agent: { select: { name: true } },
+      clerk: { select: { name: true } },
       persons: true,
-      taxCases: { include: { status: true } },
+      taxCases: {
+        include: {
+          status: { select: { id: true, statusName: true, color: true } },
+        },
+      },
       children: true,
-      documents: { include: { document: true } },
+      documents: { include: { document: { select: { documentName: true } } } },
       fileDocuments: true,
     },
   });
@@ -38,7 +42,7 @@ export default async function ClientProfilePage({
       orderBy: { yearId: "desc" },
       include: {
         client: { select: { clientId: true, clientName: true, lastName: true, cp2: true } },
-        status: true,
+        status: { select: { statusName: true } },
       },
     }),
   ]);

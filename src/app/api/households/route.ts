@@ -26,8 +26,19 @@ export async function GET(req: NextRequest) {
         : undefined,
       orderBy: { createdAt: "desc" },
       include: {
-        agent: true,
-        persons: true,
+        agent: { select: { name: true } },
+        persons: {
+          select: {
+            id: true,
+            role: true,
+            firstName: true,
+            lastName: true,
+            idNumber: true,
+            phone: true,
+            email: true,
+            flags: true,
+          },
+        },
       },
     });
 

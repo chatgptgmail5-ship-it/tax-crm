@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect } from "react";
 import { Sidebar } from "./Sidebar";
+import { InlineSpinner } from "./InlineSpinner";
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -33,8 +34,26 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  if (status === "loading" || !session) {
-    return null;
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-ink-50" dir="rtl">
+        <div className="flex flex-col items-center gap-3 text-ink-600">
+          <InlineSpinner className="size-8 text-primary-600" />
+          <p className="text-sm">טוען...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-ink-50" dir="rtl">
+        <div className="flex flex-col items-center gap-3 text-ink-600">
+          <InlineSpinner className="size-8 text-primary-600" />
+          <p className="text-sm">מעביר להתחברות...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

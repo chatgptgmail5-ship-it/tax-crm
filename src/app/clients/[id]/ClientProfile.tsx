@@ -192,6 +192,7 @@ export function ClientProfile({ household, agents, clerks, documents, caseStatus
             <CanEditGate>
               <Link
                 href={`/refunds/new?client=${household.id}`}
+                prefetch
                 className="btn btn-primary flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" />

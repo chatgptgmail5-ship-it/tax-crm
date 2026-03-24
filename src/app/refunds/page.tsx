@@ -12,7 +12,7 @@ export default async function RefundsPage() {
     orderBy: { dateCreated: "desc" },
     include: {
       client: { select: { clientId: true, clientName: true, lastName: true, cp2: true } },
-      status: true,
+      status: { select: { statusName: true } },
     },
   });
   const clientIds = [...new Set(refunds.map((r) => r.clientId))];
@@ -34,7 +34,7 @@ export default async function RefundsPage() {
         <div className="flex items-center gap-2">
           <ExportExcelButton type="refunds" />
           <CanEditGate>
-            <Link href="/refunds/new" className="btn btn-primary flex items-center gap-2">
+            <Link href="/refunds/new" prefetch className="btn btn-primary flex items-center gap-2">
               <Plus className="h-4 w-4" />
               הוסף החזר
             </Link>

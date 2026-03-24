@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { MessageCircle, Pencil } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { ID_FIELDS, OPTIONS, GENDER_OPTIONS, MARITAL_OPTIONS, QUESTION_FIELDS } from "@/lib/questionnaire-fields";
+import { calculateResult } from "@/lib/questionnaire-scoring";
+import { InlineSpinner, SkeletonBlock } from "@/components/InlineSpinner";
 
 const PHONE_ERROR = "לא נמצא מספר טלפון ללקוח";
 
@@ -62,8 +64,9 @@ export function RefundQuestionnaireSection({ householdId, household }: Props) {
   const [editAnswers, setEditAnswers] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
-  const fetchLatest = useCallback(async () => {
-    setLoading(true);
+  const fetchLatest = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent === true;
+    if (!silent) setLoading(true);
     try {
       const res = await fetch(`/api/questionnaire/latest?householdId=${householdId}`);
       if (res.ok) {
@@ -72,9 +75,9 @@ export function RefundQuestionnaireSection({ householdId, household }: Props) {
         setEditAnswers(data?.answers ?? {});
       }
     } catch {
-      setQ(null);
+      if (!silent) setQ(null);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [householdId]);
 
@@ -120,7 +123,7 @@ export function RefundQuestionnaireSection({ householdId, household }: Props) {
 ${link}`;
       const encodedMessage = encodeURIComponent(message);
       window.open(`https://wa.me/${phone}?text=${encodedMessage}`, "_blank");
-      await fetchLatest();
+      void fetchLatest({ silent: true });
     } catch (error) {
       console.error("Send questionnaire error:", error);
       alert("שגיאה בשליחת השאלון. בדוק קונסול.");
@@ -131,6 +134,10 @@ ${link}`;
 
   async function handleSaveEdit() {
     if (!q) return;
+    const prevQ = q;
+    const prevAnswers = editAnswers;
+    const result = calculateResult(editAnswers);
+    setQ((cur) => (cur ? { ...cur, answers: { ...editAnswers }, result } : null));
     setSaving(true);
     try {
       const res = await fetch("/api/questionnaire/update", {
@@ -138,19 +145,26 @@ ${link}`;
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: q.id, answers: editAnswers }),
       });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json();
-        alert(data?.error ?? "שגיאה בשמירה");
+        setQ(prevQ);
+        setEditAnswers(prevAnswers);
+        alert((data as { error?: string })?.error ?? "שגיאה בשמירה");
         return;
       }
-      await fetchLatest();
+      if (typeof (data as { result?: string }).result === "string") {
+        setQ((cur) => (cur ? { ...cur, result: (data as { result: string }).result } : null));
+      }
       setEditing(false);
     } catch (error) {
       console.error("Update questionnaire error:", error);
+      setQ(prevQ);
+      setEditAnswers(prevAnswers);
       alert("שגיאה בשמירה");
     } finally {
       setSaving(false);
     }
+    void fetchLatest({ silent: true });
   }
 
   const answers = editing ? editAnswers : (q?.answers ?? {});
@@ -158,8 +172,22 @@ ${link}`;
 
   if (loading) {
     return (
-      <div className="card p-8 text-center text-ink-500" dir="rtl">
-        טוען...
+      <div className="flex gap-6 flex-wrap lg:flex-nowrap" dir="rtl">
+        <div className="flex-1 min-w-0 order-2 lg:order-1">
+          <div className="card p-6 space-y-4">
+            <SkeletonBlock className="h-10 w-40" />
+            <SkeletonBlock className="h-6 w-full" />
+            <SkeletonBlock className="h-32 w-full" />
+            <SkeletonBlock className="h-32 w-full" />
+          </div>
+        </div>
+        <div className="w-full lg:w-[30%] min-w-0 order-1 lg:order-2">
+          <div className="card p-6 space-y-4">
+            <SkeletonBlock className="h-6 w-24" />
+            <SkeletonBlock className="h-16 w-full" />
+            <SkeletonBlock className="h-16 w-full" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -176,7 +204,7 @@ ${link}`;
               disabled={sending || !getClientPhone(household) || !normalizePhone(getClientPhone(household) ?? "")}
               className="btn btn-primary flex items-center gap-2"
             >
-              <MessageCircle className="h-4 w-4" />
+              {sending ? <InlineSpinner className="size-4 text-white" /> : <MessageCircle className="h-4 w-4" />}
               {sending ? "שולח…" : "שלח"}
             </button>
             {q && isReadOnly && (
@@ -188,6 +216,7 @@ ${link}`;
             {editing && (
               <>
                 <button type="button" onClick={handleSaveEdit} disabled={saving} className="btn btn-primary">
+                  {saving ? <InlineSpinner className="size-4 text-white" /> : null}
                   {saving ? "שומר…" : "שמור"}
                 </button>
                 <button type="button" onClick={() => { setEditing(false); setEditAnswers(q?.answers ?? {}); }} className="btn btn-ghost">

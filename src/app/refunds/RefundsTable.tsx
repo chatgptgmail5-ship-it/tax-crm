@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, X, Trash2 } from "lucide-react";
 import { CanEditGate } from "@/components/CanEditGate";
+import { InlineSpinner } from "@/components/InlineSpinner";
 import { formatDate, formatCurrency } from "@/lib/utils";
 
 type RefundRow = {
@@ -149,6 +150,7 @@ export function RefundsTable({ refunds, commissionByClientId = {} }: Props) {
                   <td className="px-6 py-4 text-center">
                     <Link
                       href={`/clients/${r.clientId}`}
+                      prefetch
                       className="font-medium text-primary-700 hover:text-primary-600 hover:underline"
                     >
                       {r.client?.clientName} {r.client?.lastName}
@@ -175,7 +177,7 @@ export function RefundsTable({ refunds, commissionByClientId = {} }: Props) {
                             hover:enabled:opacity-90 disabled:opacity-50
                           `}
                         >
-                          <Check className="h-4 w-4" />
+                          {isUpdating ? <InlineSpinner className="h-4 w-4" /> : <Check className="h-4 w-4" />}
                         </button>
                         <button
                           type="button"
@@ -188,7 +190,7 @@ export function RefundsTable({ refunds, commissionByClientId = {} }: Props) {
                             hover:enabled:opacity-90 disabled:opacity-50
                           `}
                         >
-                          <X className="h-4 w-4" />
+                          {isUpdating ? <InlineSpinner className="h-4 w-4" /> : <X className="h-4 w-4" />}
                         </button>
                       </span>
                     </CanEditGate>
