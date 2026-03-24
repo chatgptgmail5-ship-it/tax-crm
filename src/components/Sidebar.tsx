@@ -10,14 +10,15 @@ import {
   FileText,
   FileBarChart2,
   UserCog,
-  UserCheck,
   Receipt,
   FileStack,
   Shield,
   LogOut,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
+import { useQuestionnaireNotifications } from "@/components/QuestionnaireNotificationsProvider";
 
 const nav = [
   { href: "/", label: "לוח בקרה", icon: LayoutDashboard },
@@ -32,6 +33,7 @@ const nav = [
 export function Sidebar({ className }: { className?: string }) {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const { unreadCount } = useQuestionnaireNotifications();
 
   return (
     <aside className={cn("flex w-56 shrink-0 flex-col border-e border-ink-200 bg-white", className)}>
@@ -54,6 +56,7 @@ export function Sidebar({ className }: { className?: string }) {
         {nav.map((item) => {
           const Icon = item.icon;
           const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+          const showQuestionnaireBell = item.href === "/clients" && unreadCount > 0;
           return (
             <Link
               key={item.href}
@@ -64,8 +67,14 @@ export function Sidebar({ className }: { className?: string }) {
                 active ? "bg-primary-50 text-primary-700" : "text-ink-600 hover:bg-primary-50 hover:text-primary-700"
               )}
             >
-              <Icon className="h-4 w-4" />
-              {item.label}
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 flex-1">{item.label}</span>
+              {showQuestionnaireBell && (
+                <span className="relative inline-flex shrink-0" title="שאלון ממתין לצפייה">
+                  <Bell className="h-4 w-4 text-ink-600" strokeWidth={2} />
+                  <span className="absolute -left-0.5 -top-0.5 h-2 w-2 rounded-full bg-amber-400 ring-2 ring-white" />
+                </span>
+              )}
             </Link>
           );
         })}
