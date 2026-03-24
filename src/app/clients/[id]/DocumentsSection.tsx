@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, Trash2, Download } from "lucide-react";
-import { formatDate, formatDateTime } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 
 const DOCUMENT_TYPES = [
   "אישור נטול יכולת / ועדת השמה",
@@ -244,8 +244,8 @@ export function DocumentsSection({ householdId, documents, readOnly }: Props) {
                       />
                     )}
                   </td>
-                  <td className="px-4 py-3 text-center">{formatDate(d.documentCreatedAt)}</td>
-                  <td className="px-4 py-3 text-center">{formatDateTime(d.uploadedAt)}</td>
+                  <td className="px-4 py-3 text-center tabular-nums">{formatDateTime(d.documentCreatedAt)}</td>
+                  <td className="px-4 py-3 text-center tabular-nums">{formatDateTime(d.uploadedAt)}</td>
                   {!readOnly && (
                     <td className="px-4 py-3 text-center">
                       <button

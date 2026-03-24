@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Shield, UserPlus, Trash2 } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 
 type User = {
   id: number;
@@ -180,7 +180,7 @@ export function UserManagement({ users }: { users: User[] }) {
                     )}
                   </td>
                   <td className="px-6 py-4 text-ink-500 text-center">
-                    {formatDate(u.createdAt)}
+                    <span className="tabular-nums">{formatDateTime(u.createdAt)}</span>
                   </td>
                   <td className="px-6 py-4 text-center">
                     {session?.user?.role === "admin" && u.id !== Number(session?.user?.id) && (

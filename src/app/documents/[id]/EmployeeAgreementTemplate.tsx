@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { formatDate, isoToDdMmYyyy } from "@/lib/utils";
+import { formatDateTime, isoToDdMmYyyy } from "@/lib/utils";
 
 export type EmployeeAgreementFields = {
   date?: string;
@@ -130,7 +130,7 @@ function EditableCellDate({
   const inputClass = "w-full border-0 bg-transparent py-0.5 px-1 text-ink-900 font-bold text-center focus:outline-none focus:ring-1 focus:ring-primary-500 rounded min-w-0";
   if (!canEdit) {
     return (
-      <span className={`font-bold text-center ${className}`}>{v ? formatDate(v) : "—"}</span>
+      <span className={`text-center font-bold tabular-nums ${className}`}>{v ? formatDateTime(v) : "—"}</span>
     );
   }
   return (

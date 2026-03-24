@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
-import { formatDate, formatCurrency } from "@/lib/utils";
+import { formatDateTime, formatCurrency } from "@/lib/utils";
 
 const STATUS_OPTIONS = [
   "נפתחה בקשה",
@@ -159,9 +159,9 @@ export function TaxCasesSection({ householdId, taxCases, readOnly }: Props) {
                 </span>
               </div>
               <div className="flex items-center gap-6 text-sm text-ink-600">
-                <span>הגשה: {formatDate(tc.dateSubmission)}</span>
+                <span className="tabular-nums">הגשה: {formatDateTime(tc.dateSubmission)}</span>
                 <span>סכום: {formatCurrency(tc.amountRefund)}</span>
-                <span>החזר: {formatDate(tc.dateRefund)}</span>
+                <span className="tabular-nums">החזר: {formatDateTime(tc.dateRefund)}</span>
               </div>
             </div>
           ))

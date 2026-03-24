@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { CanEditGate } from "@/components/CanEditGate";
-import { formatDate } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 
 type Row = { id: number; clientName: string; templateType: string; createdAt: Date };
 
@@ -49,7 +49,7 @@ export function GeneratedDocumentsTable({ rows }: Props) {
               <tr key={r.id} className="border-b border-ink-100 transition-colors hover:bg-primary-50/50">
                 <td className="px-6 py-4 text-center">{r.clientName}</td>
                 <td className="px-6 py-4 text-center">{r.templateType}</td>
-                <td className="px-6 py-4 text-center">{formatDate(r.createdAt)}</td>
+                <td className="px-6 py-4 text-center tabular-nums">{formatDateTime(r.createdAt)}</td>
                 <td className="px-6 py-4 text-center">
                   <span className="inline-flex items-center gap-2">
                     <Link href={`/documents/${r.id}`} className="text-primary-600 hover:underline">

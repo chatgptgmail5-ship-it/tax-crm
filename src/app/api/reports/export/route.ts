@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { formatDate, formatCurrency } from "@/lib/utils";
+import { formatDateTime, formatCurrency } from "@/lib/utils";
 import * as XLSX from "xlsx";
 
 type ReportType = "1" | "2" | "3";
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
       const spouse = h.persons.find((p) => p.role === "wife");
       const name = primary ? `${primary.firstName ?? ""} ${primary.lastName ?? ""}`.trim() : "—";
       const spouseName = spouse ? `${spouse.firstName ?? ""} ${spouse.lastName ?? ""}`.trim() : "";
-      return [spouseName ? `${name} / ${spouseName}` : name || "—", null, null, "לקוח חדש", formatDate(h.createdAt), "—"];
+      return [spouseName ? `${name} / ${spouseName}` : name || "—", null, null, "לקוח חדש", formatDateTime(h.createdAt), "—"];
     });
   } else {
     const dateField = report2Mode === "received" ? "dateRefund" : "dateSubmission";
@@ -70,8 +70,8 @@ export async function GET(req: NextRequest) {
       r.yearId,
       r.amountRefund != null ? formatCurrency(r.amountRefund) : "—",
       r.status?.statusName ?? "—",
-      formatDate(r.dateSubmission),
-      formatDate(r.dateRefund),
+      formatDateTime(r.dateSubmission),
+      formatDateTime(r.dateRefund),
     ]);
   }
 

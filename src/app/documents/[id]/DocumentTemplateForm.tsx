@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { CanEditGate } from "@/components/CanEditGate";
-import { formatDate } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 
 export type FieldsData = {
   firstName?: string;
@@ -197,7 +197,7 @@ export function DocumentTemplateForm({
                       className="border-0 bg-transparent py-0.5 px-1 text-ink-900 focus:outline-none focus:ring-1 focus:ring-primary-500 rounded"
                     />
                   ) : (
-                    <span>{fields.date ? formatDate(fields.date) : "—"}</span>
+                    <span className="tabular-nums">{fields.date ? formatDateTime(fields.date) : "—"}</span>
                   )}
                 </td>
               </tr>

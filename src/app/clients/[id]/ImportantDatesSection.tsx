@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { useCanEdit } from "@/hooks/useCanEdit";
-import { formatDate } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 
 type ImportantDate = {
   id: number;
@@ -214,7 +214,7 @@ export function ImportantDatesSection({ householdId, readOnly }: Props) {
             ) : (
               dates.map((d) => (
                 <tr key={d.id} className="border-b border-ink-100 transition-colors hover:bg-primary-50/50">
-                  <td className="px-6 py-4 text-center">{formatDate(d.date)}</td>
+                  <td className="px-6 py-4 text-center tabular-nums">{formatDateTime(d.date)}</td>
                   <td className="px-6 py-4 text-center">{d.performer?.name ?? "—"}</td>
                   <td className="px-6 py-4 text-center">{d.subject ?? "—"}</td>
                   <td className="px-6 py-4 text-right align-top">

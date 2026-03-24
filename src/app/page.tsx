@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Users, Receipt, UserCog, UserCheck, ArrowRight } from "lucide-react";
-import { formatDate, formatCurrency, formatNumber } from "@/lib/utils";
+import { formatDateTime, formatCurrency, formatNumber } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -102,7 +102,7 @@ export default async function DashboardPage() {
                 >
                   <p className="font-medium text-ink-900">{getHouseholdDisplayName(h)}</p>
                   <p className="text-sm text-ink-500">
-                    {h.agent?.name ?? "—"} • {formatDate(h.createdAt)}
+                    {h.agent?.name ?? "—"} • {formatDateTime(h.createdAt)}
                   </p>
                 </Link>
               ))
@@ -134,7 +134,7 @@ export default async function DashboardPage() {
                   </p>
                   <p className="text-sm text-ink-500">
                     {formatCurrency(tc.amountRefund)} • {tc.status?.statusName ?? "—"} •{" "}
-                    {formatDate(tc.createdAt)}
+                    {formatDateTime(tc.createdAt)}
                   </p>
                 </Link>
               ))

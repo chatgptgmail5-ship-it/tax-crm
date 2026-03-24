@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Check, X, Trash2 } from "lucide-react";
 import { CanEditGate } from "@/components/CanEditGate";
 import { InlineSpinner } from "@/components/InlineSpinner";
-import { formatDate, formatCurrency } from "@/lib/utils";
+import { formatDateTime, formatCurrency } from "@/lib/utils";
 
 type RefundRow = {
   refundId: number;
@@ -161,8 +161,8 @@ export function RefundsTable({ refunds, commissionByClientId = {} }: Props) {
                     {r.amountRefund != null ? formatCurrency(r.amountRefund) : "—"}
                   </td>
                   <td className="px-6 py-4 text-ink-600 text-center">{r.status?.statusName ?? "—"}</td>
-                  <td className="px-6 py-4 text-ink-500 text-center">{formatDate(r.dateSubmission)}</td>
-                  <td className="px-6 py-4 text-ink-500 text-center">{formatDate(r.dateRefund)}</td>
+                  <td className="px-6 py-4 text-center tabular-nums text-ink-500">{formatDateTime(r.dateSubmission)}</td>
+                  <td className="px-6 py-4 text-center tabular-nums text-ink-500">{formatDateTime(r.dateRefund)}</td>
                   <td className="px-6 py-4 text-center">
                     <CanEditGate>
                       <span className="inline-flex items-center gap-0.5">

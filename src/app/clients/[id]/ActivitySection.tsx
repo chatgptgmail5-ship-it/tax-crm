@@ -48,9 +48,7 @@ export function ActivitySection({ householdId }: Props) {
             {activities.map((a) => (
               <li key={a.id} className="relative pb-6 last:pb-0">
                 <span className="absolute right-0 top-0 -translate-x-1/2 flex h-4 w-4 rounded-full border-2 border-primary-500 bg-white" />
-                <p className="text-xs text-ink-500">
-                  {formatDateTime(a.createdAt)}
-                </p>
+                <p className="text-xs tabular-nums text-ink-500">{formatDateTime(a.createdAt)}</p>
                 <p className="mt-0.5 font-medium text-ink-900">
                   {a.description ?? a.action}
                 </p>

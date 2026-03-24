@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { MessageCircle, Pencil } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 import { ID_FIELDS, OPTIONS, GENDER_OPTIONS, MARITAL_OPTIONS, QUESTION_FIELDS } from "@/lib/questionnaire-fields";
 import { calculateResult } from "@/lib/questionnaire-scoring";
 import { InlineSpinner, SkeletonBlock } from "@/components/InlineSpinner";
@@ -339,18 +339,24 @@ ${link}`;
       <div className="w-full lg:w-[30%] min-w-0 order-1 lg:order-2">
         <div className="card p-6">
           <h3 className="font-semibold text-ink-900 mb-4">סיכום</h3>
-          <dl className="space-y-4 text-sm">
-            <div>
-              <dt className="text-ink-500">תאריך שליחה</dt>
-              <dd className="font-medium text-ink-800 mt-0.5">{q?.dateSent ? formatDate(q.dateSent) : "—"}</dd>
+          <dl className="space-y-4 text-sm" dir="rtl">
+            <div className="flex items-baseline justify-between gap-4">
+              <dt className="m-0 shrink-0 text-ink-500">תאריך שליחה</dt>
+              <dd className="m-0 font-medium tabular-nums text-ink-800">
+                {q?.dateSent ? formatDateTime(q.dateSent) : "—"}
+              </dd>
             </div>
-            <div>
-              <dt className="text-ink-500">תאריך קבלה</dt>
-              <dd className="font-medium text-ink-800 mt-0.5">{q?.dateReceived ? formatDate(q.dateReceived) : "—"}</dd>
+            <div className="flex items-baseline justify-between gap-4">
+              <dt className="m-0 shrink-0 text-ink-500">תאריך קבלה</dt>
+              <dd className="m-0 font-medium tabular-nums text-ink-800">
+                {q?.dateReceived ? formatDateTime(q.dateReceived) : "—"}
+              </dd>
             </div>
-            <div>
-              <dt className="text-ink-500">מגיע / לא מגיע החזר</dt>
-              <dd className={`font-semibold mt-0.5 ${getResultColorClass(q?.result ?? null)}`}>{q?.result ?? "—"}</dd>
+            <div className="flex items-baseline justify-between gap-4">
+              <dt className="m-0 shrink-0 text-ink-500">מגיע / לא מגיע החזר</dt>
+              <dd className={`m-0 font-semibold tabular-nums ${getResultColorClass(q?.result ?? null)}`}>
+                {q?.result ?? "—"}
+              </dd>
             </div>
           </dl>
         </div>

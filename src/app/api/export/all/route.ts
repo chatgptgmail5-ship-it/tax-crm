@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { formatDate, formatCurrency } from "@/lib/utils";
+import { formatDateTime, formatCurrency } from "@/lib/utils";
 import * as XLSX from "xlsx";
 
 function getHouseholdName(persons: { role: string | null; firstName: string | null; lastName: string | null }[]): string {
@@ -76,7 +76,7 @@ export async function GET() {
         r.yearId,
         r.amountRefund != null ? formatCurrency(r.amountRefund) : "—",
         r.status?.statusName ?? "—",
-        formatDate(r.dateSubmission),
+        formatDateTime(r.dateSubmission),
       ]),
     ];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(refundsData), "החזרים");

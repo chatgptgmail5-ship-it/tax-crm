@@ -43,7 +43,10 @@ export function parseDdMmYyyyToIso(str: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** Display date and time: DD/MM/YYYY, HH:MM. */
+/**
+ * Hebrew-friendly display: date + time in local timezone.
+ * Format: DD/MM/YYYY, HH:mm (24h, leading zeros, comma + space before time).
+ */
 export function formatDateTime(d: Date | string | null | undefined) {
   if (!d) return "—";
   const date = new Date(d);

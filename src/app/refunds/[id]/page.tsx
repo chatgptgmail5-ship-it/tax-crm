@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { RefundForm } from "@/components/RefundForm";
-import { formatDate, formatCurrency } from "@/lib/utils";
+import { formatDateTime, formatCurrency } from "@/lib/utils";
 import { ArrowLeft } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -60,7 +60,7 @@ export default async function RefundDetailPage({
                       {rs.isValid ? "בוצע" : "ממתין"}
                     </span>
                     {rs.dateToDo && (
-                      <span className="text-ink-500">{formatDate(rs.dateToDo)}</span>
+                      <span className="tabular-nums text-ink-500">{formatDateTime(rs.dateToDo)}</span>
                     )}
                   </li>
                 ))}

@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FileDown } from "lucide-react";
-import { formatCurrency, formatDate, isoToDdMmYyyy } from "@/lib/utils";
+import { formatCurrency, formatDateTime, isoToDdMmYyyy } from "@/lib/utils";
 
 type ReportType = "1" | "2" | "3";
 type Report2Mode = "submitted" | "received";
@@ -282,8 +282,8 @@ export function ReportsManager() {
                     <td className="px-2 py-2">{row.year ?? "—"}</td>
                     <td className="px-2 py-2">{row.amountRefund != null ? formatCurrency(row.amountRefund) : "—"}</td>
                     <td className="px-2 py-2">{row.status || "—"}</td>
-                    <td className="px-2 py-2">{formatDate(row.dateSubmission)}</td>
-                    <td className="px-2 py-2">{formatDate(row.dateRefund)}</td>
+                    <td className="px-2 py-2 tabular-nums">{formatDateTime(row.dateSubmission)}</td>
+                    <td className="px-2 py-2 tabular-nums">{formatDateTime(row.dateRefund)}</td>
                   </tr>
                 ))
               )}
@@ -313,7 +313,7 @@ export function ReportsManager() {
             <div ref={printableRef} className="print-root report-a4 bg-white" dir="rtl">
               <header className="mb-4 border-b border-ink-200 pb-3">
                 <div className="grid grid-cols-3 items-center">
-                  <div className="text-sm text-ink-700 text-left">{formatDate(new Date().toISOString())}</div>
+                  <div className="text-left text-sm tabular-nums text-ink-700">{formatDateTime(new Date().toISOString())}</div>
                   <div className="flex justify-center">
                     <img src="/logo.png" alt="logo" className="h-14 w-14 object-contain" />
                   </div>
@@ -367,7 +367,7 @@ export function ReportsManager() {
                         <td className="report-td">{row.idNumber || "—"}</td>
                         <td className="report-td">{row.phone || "—"}</td>
                         <td className="report-td">{row.city || "—"}</td>
-                        <td className="report-td">{formatDate(row.intakeDate || row.dateSubmission)}</td>
+                        <td className="report-td tabular-nums">{formatDateTime(row.intakeDate || row.dateSubmission)}</td>
                       </tr>
                     ) : reportType === "2" ? (
                       <tr key={`print-${idx}`}>
@@ -377,7 +377,9 @@ export function ReportsManager() {
                         <td className="report-td">{row.amountRefund != null ? formatCurrency(row.amountRefund) : "—"}</td>
                         <td className="report-td">{row.status || "—"}</td>
                         <td className="report-td">
-                          {report2Mode === "received" ? formatDate(row.dateRefund) : formatDate(row.dateSubmission)}
+                          {report2Mode === "received"
+                            ? formatDateTime(row.dateRefund)
+                            : formatDateTime(row.dateSubmission)}
                         </td>
                       </tr>
                     ) : (
@@ -387,8 +389,8 @@ export function ReportsManager() {
                         <td className="report-td">{row.year ?? "—"}</td>
                         <td className="report-td">{row.amountRefund != null ? formatCurrency(row.amountRefund) : "—"}</td>
                         <td className="report-td">{row.status || "—"}</td>
-                        <td className="report-td">{formatDate(row.dateSubmission)}</td>
-                        <td className="report-td">{formatDate(row.dateRefund)}</td>
+                        <td className="report-td tabular-nums">{formatDateTime(row.dateSubmission)}</td>
+                        <td className="report-td tabular-nums">{formatDateTime(row.dateRefund)}</td>
                       </tr>
                     )
                   )}
@@ -403,7 +405,7 @@ export function ReportsManager() {
               </table>
 
               <footer className="mt-5 flex items-center justify-between border-t border-ink-200 pt-3 text-sm">
-                <span>תאריך הפקה: {formatDate(new Date().toISOString())}</span>
+                <span className="tabular-nums">תאריך הפקה: {formatDateTime(new Date().toISOString())}</span>
                 <span>עמוד 1 מתוך 1</span>
               </footer>
             </div>
