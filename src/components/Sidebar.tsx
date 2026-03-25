@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
 import Image from "next/image";
 import {
@@ -37,6 +38,31 @@ export function Sidebar({ className }: { className?: string }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { hasUnread } = useQuestionnaireNotifications();
+  const [hasOpenNotes, setHasOpenNotes] = useState(false);
+
+  const fetchNotesBell = useCallback(async () => {
+    if (!session?.user) return;
+    try {
+      const res = await fetch("/api/notes?bell=1");
+      if (!res.ok) return;
+      const data = (await res.json()) as { hasOpen?: boolean };
+      setHasOpenNotes(data.hasOpen === true);
+    } catch {
+      setHasOpenNotes(false);
+    }
+  }, [session?.user]);
+
+  useEffect(() => {
+    void fetchNotesBell();
+    const t = setInterval(() => void fetchNotesBell(), 45_000);
+    return () => clearInterval(t);
+  }, [fetchNotesBell]);
+
+  useEffect(() => {
+    const onNotesChanged = () => void fetchNotesBell();
+    window.addEventListener("notes-changed", onNotesChanged);
+    return () => window.removeEventListener("notes-changed", onNotesChanged);
+  }, [fetchNotesBell]);
 
   return (
     <aside className={cn("flex w-56 shrink-0 flex-col border-e border-ink-200 bg-white", className)}>
@@ -73,6 +99,9 @@ export function Sidebar({ className }: { className?: string }) {
               {item.label}
               {item.href === "/clients" && hasUnread ? (
                 <Bell className="h-3.5 w-3.5 shrink-0 text-amber-500" aria-label="שאלונים חדשים" title="שאלונים חדשים" />
+              ) : null}
+              {item.href === "/notes" && hasOpenNotes ? (
+                <Bell className="h-3.5 w-3.5 shrink-0 text-amber-500" aria-label="הערות פתוחות" title="הערות פתוחות" />
               ) : null}
             </Link>
           );

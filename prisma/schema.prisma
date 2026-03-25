@@ -337,3 +337,16 @@ model TblRefundSub {
   process   TblProcess @relation(fields: [processId], references: [processId])
   refund    TblRefund  @relation(fields: [refundId], references: [refundId], onDelete: Cascade)
 }
+
+/// CRM staff notes (הערות page). open = פתוחה; archived = בארכיון.
+model StaffNote {
+  id        Int      @id @default(autoincrement())
+  content   String   @db.Text
+  priority  String
+  status    String   @default("open")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("staff_notes")
+}
