@@ -43,6 +43,11 @@ export async function PATCH(
   if (body.status !== undefined) {
     if (body.status === "archived") {
       data.status = "archived";
+    } else if (body.status === "open") {
+      if (existing.status !== "archived") {
+        return NextResponse.json({ error: "ניתן לשחזר רק הערה מהארכיון" }, { status: 400 });
+      }
+      data.status = "open";
     } else {
       return NextResponse.json({ error: "סטטוס לא תקין" }, { status: 400 });
     }

@@ -22,6 +22,19 @@ const PRIORITY_LABELS: Record<Priority, string> = {
 
 const PRIORITIES: Priority[] = ["low", "medium", "high"];
 
+function priorityBadgeClass(priority: string): string {
+  if (priority === "low") {
+    return "rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700";
+  }
+  if (priority === "medium") {
+    return "rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800";
+  }
+  if (priority === "high") {
+    return "rounded-full bg-red-50 px-2 py-0.5 font-medium text-red-700";
+  }
+  return "rounded-full bg-ink-100 px-2 py-0.5 text-ink-700";
+}
+
 function notifyNotesChanged() {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("notes-changed"));
@@ -44,6 +57,7 @@ export function NotesPageClient() {
   const [savingId, setSavingId] = useState<number | null>(null);
   const [pendingArchiveId, setPendingArchiveId] = useState<number | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const [pendingRestoreId, setPendingRestoreId] = useState<number | null>(null);
 
   const fetchOpen = useCallback(async () => {
     const res = await fetch("/api/notes?status=open");
@@ -78,6 +92,12 @@ export function NotesPageClient() {
 
   const displayedOpen =
     filterPriority === null ? notesOpen : notesOpen.filter((n) => n.priority === filterPriority);
+
+  function cancelCreateDraft() {
+    setCreating(false);
+    setDraftContent("");
+    setShowPriorityModal(false);
+  }
 
   function handleToggleCreate() {
     if (!creating) {
@@ -177,6 +197,33 @@ export function NotesPageClient() {
     }
   }
 
+  async function confirmRestore() {
+    if (pendingRestoreId == null) return;
+    const id = pendingRestoreId;
+    setPendingRestoreId(null);
+    setSavingId(id);
+    try {
+      const res = await fetch(`/api/notes/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "open" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert((data as { error?: string }).error ?? "שגיאה בשחזור");
+        return;
+      }
+      const updated = data as NoteDto;
+      setNotesArchived((prev) => prev.filter((n) => n.id !== id));
+      setNotesOpen((prev) => [updated, ...prev]);
+      notifyNotesChanged();
+    } catch {
+      alert("שגיאה בשחזור");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
   async function runDelete(id: number) {
     setPendingDeleteId(null);
     setSavingId(id);
@@ -205,7 +252,7 @@ export function NotesPageClient() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="text-center">
         <h1 className="text-2xl font-bold text-ink-900">הערות</h1>
       </div>
 
@@ -264,6 +311,7 @@ export function NotesPageClient() {
               setView((v) => (v === "archive" ? "main" : "archive"));
               setFilterPickerOpen(false);
               setCreating(false);
+              setDraftContent("");
               setShowPriorityModal(false);
             }}
           >
@@ -273,7 +321,7 @@ export function NotesPageClient() {
       </div>
 
       {canEdit && view === "main" && creating ? (
-        <div className="card p-4">
+        <div className="card space-y-3 p-4">
           <textarea
             className="input min-h-[8rem] w-full resize-y py-2"
             placeholder="כתוב כאן את ההערה…"
@@ -281,6 +329,9 @@ export function NotesPageClient() {
             onChange={(e) => setDraftContent(e.target.value)}
             dir="rtl"
           />
+          <button type="button" className="btn btn-ghost text-sm" onClick={cancelCreateDraft}>
+            בטל
+          </button>
         </div>
       ) : null}
 
@@ -296,12 +347,24 @@ export function NotesPageClient() {
             {notesArchived.map((n) => (
               <li key={n.id} className="card p-4">
                 <p className="text-sm whitespace-pre-wrap text-ink-900">{n.content}</p>
-                <div className="mt-3 flex flex-wrap gap-2 text-xs text-ink-600">
-                  <span className="rounded-full bg-ink-100 px-2 py-0.5">
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                  <span className={priorityBadgeClass(n.priority)}>
                     {(PRIORITY_LABELS as Record<string, string>)[n.priority] ?? n.priority}
                   </span>
-                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-amber-800">סגורה</span>
+                  <span className="rounded-full bg-ink-100 px-2 py-0.5 text-ink-600">סגורה</span>
                 </div>
+                {canEdit ? (
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      className="btn btn-secondary text-sm"
+                      disabled={savingId === n.id}
+                      onClick={() => setPendingRestoreId(n.id)}
+                    >
+                      שחזור
+                    </button>
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -351,11 +414,11 @@ export function NotesPageClient() {
               ) : (
                 <>
                   <p className="text-sm whitespace-pre-wrap text-ink-900">{n.content}</p>
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-ink-600">
-                    <span className="rounded-full bg-ink-100 px-2 py-0.5">
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                    <span className={priorityBadgeClass(n.priority)}>
                       {(PRIORITY_LABELS as Record<string, string>)[n.priority] ?? n.priority}
                     </span>
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-800">פתוחה</span>
+                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-800">פתוחה</span>
                   </div>
                   {canEdit ? (
                     <div className="mt-4 flex flex-wrap gap-2">
@@ -464,6 +527,27 @@ export function NotesPageClient() {
                 className="btn btn-primary text-sm"
                 onClick={() => void runDelete(pendingDeleteId)}
               >
+                כן
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {pendingRestoreId != null ? (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          dir="rtl"
+        >
+          <div className="card p-6 max-w-md w-full shadow-lg space-y-4">
+            <p className="text-sm text-ink-800">לשחזר הערה?</p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button type="button" className="btn btn-ghost text-sm" onClick={() => setPendingRestoreId(null)}>
+                לא
+              </button>
+              <button type="button" className="btn btn-primary text-sm" onClick={() => void confirmRestore()}>
                 כן
               </button>
             </div>
