@@ -173,7 +173,9 @@ export function ClientsList() {
   const selectedSet = useMemo(() => new Set(selectedClientIds), [selectedClientIds]);
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
   const [whatsappMessage, setWhatsappMessage] = useState("");
+  const [whatsappRecipientsSnapshot, setWhatsappRecipientsSnapshot] = useState<number[] | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [confirmBulkActionOpen, setConfirmBulkActionOpen] = useState(false);
 
   function toggleSelectedClient(id: number) {
     setSelectedClientIds((prev) => {
@@ -236,8 +238,13 @@ export function ClientsList() {
       alert("נא להזין הודעה");
       return;
     }
+    const recipientIds = whatsappRecipientsSnapshot ?? selectedClientIds;
+    if (recipientIds.length === 0) {
+      alert("לא נמצאו לקוחות לשליחה.");
+      return;
+    }
     let sentCount = 0;
-    for (const id of selectedClientIds) {
+    for (const id of recipientIds) {
       const h = allHouseholds.find((x) => x.id === id);
       if (!h) continue;
       const wa = getWaNumberForHousehold(h);
@@ -326,32 +333,13 @@ export function ClientsList() {
             className="btn btn-secondary text-sm"
             disabled={bulkBusy}
             onClick={async () => {
-              if (selectedClientIds.length === 0) {
-                alert("יש לבחור לפחות לקוח אחד.");
-                return;
-              }
-              setBulkBusy(true);
-              try {
-                if (pendingBulkAction === "export") {
-                  exportSelectedHouseholds();
-                  setSelectionMode(false);
-                  setSelectedClientIds([]);
-                  return;
-                }
-                if (pendingBulkAction === "whatsapp") {
-                  setWhatsappMessage("");
-                  setWhatsappModalOpen(true);
-                  return;
-                }
-                if (pendingBulkAction === "delete") {
-                  await moveSelectedToRecycleBin();
-                  setSelectionMode(false);
-                  setSelectedClientIds([]);
-                  return;
-                }
-              } finally {
-                setBulkBusy(false);
-              }
+                      if (selectedClientIds.length === 0) {
+                        // Exit selection mode immediately when nothing is selected.
+                        setSelectionMode(false);
+                        setSelectedClientIds([]);
+                        return;
+                      }
+                      setConfirmBulkActionOpen(true);
             }}
           >
             סיים
@@ -424,14 +412,14 @@ export function ClientsList() {
                   >
                     <td className="px-6 py-4 text-center">
                       {selectionMode ? (
-                        <div className="flex flex-row-reverse items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-2">
                           <button
                             type="button"
                             role="checkbox"
                             aria-checked={selectedSet.has(h.id)}
                             aria-label={`בחר לקוח: ${getRegisteredPartnerName(h)}`}
                             className={cn(
-                              "h-5 w-5 rounded border transition-colors flex items-center justify-center",
+                              "h-[22px] w-[22px] rounded border transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer",
                               selectedSet.has(h.id)
                                 ? "bg-blue-600 border-blue-600"
                                 : "bg-white border-ink-300"
@@ -608,6 +596,70 @@ export function ClientsList() {
         </div>
       ) : null}
 
+      {confirmBulkActionOpen ? (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          dir="rtl"
+        >
+          <div className="card p-6 max-w-md w-full shadow-lg space-y-4">
+            <p className="text-sm text-ink-800">האם לבצע את הפעולה שנבחרה?</p>
+            <div className="flex flex-wrap justify-end gap-2 pt-2">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={bulkBusy}
+                onClick={() => {
+                  setConfirmBulkActionOpen(false);
+                  setWhatsappRecipientsSnapshot(null);
+                  setSelectionMode(false);
+                  setSelectedClientIds([]);
+                }}
+              >
+                לא
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={bulkBusy}
+                onClick={async () => {
+                  setConfirmBulkActionOpen(false);
+                  const idsSnapshot = [...selectedClientIds];
+                  setBulkBusy(true);
+                  try {
+                    if (pendingBulkAction === "export") {
+                      for (const id of idsSnapshot) {
+                        window.open(`/api/export/single?householdId=${id}`, "_blank");
+                      }
+                    } else if (pendingBulkAction === "whatsapp") {
+                      setWhatsappRecipientsSnapshot(idsSnapshot);
+                      setWhatsappMessage("");
+                      setWhatsappModalOpen(true);
+                    } else if (pendingBulkAction === "delete") {
+                      // Uses selectedClientIds internally; keep them until after delete call.
+                      await moveSelectedToRecycleBin();
+                    }
+                  } finally {
+                    setBulkBusy(false);
+                  }
+
+                  setSelectionMode(false);
+                  setSelectedClientIds([]);
+
+                  // For WhatsApp: snapshot must remain until user presses שלח/בטל.
+                  if (pendingBulkAction !== "whatsapp") {
+                    setWhatsappRecipientsSnapshot(null);
+                  }
+                }}
+              >
+                כן
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {whatsappModalOpen ? (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
@@ -630,6 +682,7 @@ export function ClientsList() {
                 className="btn btn-ghost"
                 onClick={() => {
                   setWhatsappModalOpen(false);
+                  setWhatsappRecipientsSnapshot(null);
                 }}
               >
                 בטל
@@ -644,6 +697,7 @@ export function ClientsList() {
                   setSelectionMode(false);
                   setSelectedClientIds([]);
                   setWhatsappMessage("");
+                  setWhatsappRecipientsSnapshot(null);
                 }}
               >
                 שלח
