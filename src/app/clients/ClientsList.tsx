@@ -3,7 +3,7 @@
 import { useState, useEffect, useTransition, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { Check, Search } from "lucide-react";
 import { useCanEdit } from "@/hooks/useCanEdit";
 import { useQuestionnaireNotifications } from "@/contexts/QuestionnaireNotificationsContext";
 import { cn } from "@/lib/utils";
@@ -163,6 +163,22 @@ export function ClientsList() {
   const [search, setSearch] = useState("");
   const [notificationsOnly, setNotificationsOnly] = useState(false);
 
+  // Bulk selection UI only (no action execution yet).
+  type BulkAction = "export" | "whatsapp" | "delete";
+  const [actionChooserOpen, setActionChooserOpen] = useState(false);
+  const [pendingBulkAction, setPendingBulkAction] = useState<BulkAction>("export");
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedClientIds, setSelectedClientIds] = useState<number[]>([]);
+  const selectedSet = useMemo(() => new Set(selectedClientIds), [selectedClientIds]);
+
+  function toggleSelectedClient(id: number) {
+    setSelectedClientIds((prev) => {
+      const has = prev.includes(id);
+      if (has) return prev.filter((x) => x !== id);
+      return [...prev, id];
+    });
+  }
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -220,6 +236,27 @@ export function ClientsList() {
         >
           {notificationsOnly ? "רגיל" : "התראות"}
         </button>
+
+        {!selectionMode ? (
+          <button
+            type="button"
+            className="btn btn-secondary text-sm"
+            onClick={() => setActionChooserOpen(true)}
+          >
+            בחירה
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn btn-secondary text-sm"
+            onClick={() => {
+              setSelectionMode(false);
+              setSelectedClientIds([]);
+            }}
+          >
+            סיים
+          </button>
+        )}
       </div>
 
       <div className="card overflow-hidden">
@@ -279,28 +316,64 @@ export function ClientsList() {
                       pendingClientId === h.id && "bg-primary-50/70"
                     )}
                     onClick={(e) => {
+                      if (selectionMode) return;
                       if ((e.target as HTMLElement).closest("a[href], button")) return;
                       goToClient(h.id);
                     }}
                   >
                     <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center justify-center gap-1.5">
-                        {unreadSet.has(h.id) ? (
-                          <span
-                            className="h-2 w-2 shrink-0 rounded-full bg-amber-400"
-                            title="שאלון חדש"
-                            aria-hidden
-                          />
-                        ) : null}
-                        <Link
-                          href={`/clients/${h.id}`}
-                          prefetch
-                          onClick={() => setPendingClientId(h.id)}
-                          className="font-medium text-primary-700 hover:text-primary-600 hover:underline"
-                        >
-                          {getRegisteredPartnerName(h)}
-                        </Link>
-                      </span>
+                      {selectionMode ? (
+                        <div className="flex flex-row-reverse items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            role="checkbox"
+                            aria-checked={selectedSet.has(h.id)}
+                            aria-label={`בחר לקוח: ${getRegisteredPartnerName(h)}`}
+                            className={cn(
+                              "h-5 w-5 rounded border transition-colors flex items-center justify-center",
+                              selectedSet.has(h.id)
+                                ? "bg-blue-600 border-blue-600"
+                                : "bg-white border-ink-300"
+                            )}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              toggleSelectedClient(h.id);
+                            }}
+                          >
+                            {selectedSet.has(h.id) ? <Check className="h-3.5 w-3.5 text-gray-200" /> : null}
+                          </button>
+
+                          <span className="inline-flex items-center justify-center gap-1.5">
+                            {unreadSet.has(h.id) ? (
+                              <span
+                                className="h-2 w-2 shrink-0 rounded-full bg-amber-400"
+                                title="שאלון חדש"
+                                aria-hidden
+                              />
+                            ) : null}
+                            <span className="font-medium text-primary-700">{getRegisteredPartnerName(h)}</span>
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center justify-center gap-1.5">
+                          {unreadSet.has(h.id) ? (
+                            <span
+                              className="h-2 w-2 shrink-0 rounded-full bg-amber-400"
+                              title="שאלון חדש"
+                              aria-hidden
+                            />
+                          ) : null}
+                          <Link
+                            href={`/clients/${h.id}`}
+                            prefetch
+                            onClick={() => setPendingClientId(h.id)}
+                            className="font-medium text-primary-700 hover:text-primary-600 hover:underline"
+                          >
+                            {getRegisteredPartnerName(h)}
+                          </Link>
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-ink-600 text-center">{getRegisteredPartnerId(h)}</td>
                     <td className="px-6 py-4 text-ink-600 text-center">{getSpouseName(h)}</td>
@@ -362,6 +435,67 @@ export function ClientsList() {
           </table>
         </div>
       </div>
+
+      {actionChooserOpen ? (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          dir="rtl"
+        >
+          <div className="card p-6 max-w-md w-full shadow-lg space-y-4">
+            <p className="text-sm text-ink-800">מהי הפעולה?</p>
+
+            <div className="flex flex-col gap-2">
+              {(
+                [
+                  { key: "export" as const, label: "ייצוא" },
+                  { key: "whatsapp" as const, label: "וואטסאפ" },
+                  { key: "delete" as const, label: "מחיקה" },
+                ] as const
+              ).map((opt) => {
+                const active = pendingBulkAction === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    className={cn(
+                      "btn text-sm justify-start",
+                      active ? "btn-primary" : "btn-ghost"
+                    )}
+                    onClick={() => setPendingBulkAction(opt.key)}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-wrap justify-end gap-2 pt-2">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  setActionChooserOpen(false);
+                }}
+              >
+                בטל
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  setActionChooserOpen(false);
+                  setSelectionMode(true);
+                  setSelectedClientIds([]);
+                }}
+              >
+                בחר
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
