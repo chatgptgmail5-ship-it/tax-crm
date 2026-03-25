@@ -22,6 +22,8 @@ const PRIORITY_LABELS: Record<Priority, string> = {
 
 const PRIORITIES: Priority[] = ["low", "medium", "high"];
 
+const NOTES_BAR_PRIMARY_BTN = "btn btn-primary text-sm";
+
 function priorityBadgeClass(priority: string): string {
   if (priority === "low") {
     return "rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700";
@@ -280,7 +282,7 @@ export function NotesPageClient() {
           {canEdit && view === "main" ? (
             <button
               type="button"
-              className="btn btn-primary text-sm"
+              className={NOTES_BAR_PRIMARY_BTN}
               disabled={creating}
               onClick={() => setCreating(true)}
             >
@@ -330,7 +332,7 @@ export function NotesPageClient() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="btn btn-primary text-sm"
+            className={NOTES_BAR_PRIMARY_BTN}
             onClick={() => {
               setView((v) => (v === "archive" ? "main" : "archive"));
               setFilterPickerOpen(false);
