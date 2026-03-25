@@ -10,12 +10,12 @@ import {
   FileText,
   FileBarChart2,
   UserCog,
-  UserCheck,
   Receipt,
   FileStack,
   Shield,
   LogOut,
   Bell,
+  StickyNote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
@@ -26,9 +26,11 @@ const nav = [
   { href: "/clients", label: "לקוחות", icon: Users },
   { href: "/refunds", label: "החזרים", icon: Receipt },
   { href: "/reports", label: "דוחות", icon: FileBarChart2 },
-  { href: "/agents", label: "סוכנים", icon: UserCog },
   { href: "/documents/generator", label: "מחולל מסמכים", icon: FileText },
   { href: "/documents", label: "סוגי מסמכים", icon: FileStack },
+  { href: "/notes", label: "הערות", icon: StickyNote },
+  { href: "/agents", label: "סוכנים", icon: UserCog },
+  { href: "/users", label: "משתמשים", icon: Shield },
 ];
 
 export function Sidebar({ className }: { className?: string }) {
@@ -75,17 +77,6 @@ export function Sidebar({ className }: { className?: string }) {
             </Link>
           );
         })}
-        <Link
-          href="/users"
-          prefetch
-          className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-            pathname === "/users" ? "bg-primary-50 text-primary-700" : "text-ink-600 hover:bg-primary-50 hover:text-primary-700"
-          )}
-        >
-          <Shield className="h-4 w-4" />
-          משתמשים
-        </Link>
       </nav>
       <div className="border-t border-ink-200 p-3">
         <p className="mb-2 truncate px-3 text-xs text-ink-500">{session?.user?.email}</p>
