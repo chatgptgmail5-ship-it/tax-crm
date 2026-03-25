@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition, useMemo, useRef } from "react";
+import { useState, useEffect, useTransition, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Search } from "lucide-react";
@@ -151,7 +151,12 @@ function StatusBadge({ status }: { status: string | null }) {
   );
 }
 
-export function ClientsList() {
+export type ClientsListProps = {
+  showRecycleBin: boolean;
+  onClientCountsChange?: (counts: { normal: number; deleted: number }) => void;
+};
+
+export function ClientsList({ showRecycleBin, onClientCountsChange }: ClientsListProps) {
   const { unreadHouseholdIds } = useQuestionnaireNotifications();
   const unreadSet = useMemo(() => new Set(unreadHouseholdIds), [unreadHouseholdIds]);
   const canEdit = useCanEdit();
@@ -162,20 +167,13 @@ export function ClientsList() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [notificationsOnly, setNotificationsOnly] = useState(false);
-  const [showRecycleBin, setShowRecycleBin] = useState(false);
 
-  // Bulk selection UI only (no action execution yet).
-  type BulkAction = "export" | "whatsapp" | "delete";
+  type BulkAction = "export" | "delete";
   const [actionChooserOpen, setActionChooserOpen] = useState(false);
   const [pendingBulkAction, setPendingBulkAction] = useState<BulkAction>("export");
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedClientIds, setSelectedClientIds] = useState<number[]>([]);
   const selectedSet = useMemo(() => new Set(selectedClientIds), [selectedClientIds]);
-  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
-  const [whatsappMessage, setWhatsappMessage] = useState("");
-  const [whatsappRecipientsSnapshot, setWhatsappRecipientsSnapshot] = useState<number[] | null>(null);
-  /** Set synchronously when bulk WhatsApp is confirmed; survives empty `selectedClientIds`. */
-  const waBulkRecipientIdsRef = useRef<number[] | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [confirmBulkActionOpen, setConfirmBulkActionOpen] = useState(false);
 
@@ -186,6 +184,33 @@ export function ClientsList() {
       return [...prev, id];
     });
   }
+
+  const refreshClientCounts = useCallback(async () => {
+    try {
+      const [resN, resD] = await Promise.all([
+        fetch("/api/households"),
+        fetch("/api/households?deleted=1"),
+      ]);
+      const [n, d] = await Promise.all([resN.json(), resD.json()]);
+      onClientCountsChange?.({
+        normal: Array.isArray(n) ? n.length : 0,
+        deleted: Array.isArray(d) ? d.length : 0,
+      });
+    } catch {
+      /* ignore */
+    }
+  }, [onClientCountsChange]);
+
+  useEffect(() => {
+    void refreshClientCounts();
+  }, [refreshClientCounts]);
+
+  useEffect(() => {
+    setNotificationsOnly(false);
+    setActionChooserOpen(false);
+    setSelectionMode(false);
+    setSelectedClientIds([]);
+  }, [showRecycleBin]);
 
   useEffect(() => {
     let cancelled = false;
@@ -229,11 +254,6 @@ export function ClientsList() {
     }
   }
 
-  function getWaNumberForHousehold(h: Household): string | null {
-    const raw = getPhoneRaw(h);
-    return raw ? normalizeIsraeliPhoneForWa(raw) : null;
-  }
-
   async function moveSelectedToRecycleBin() {
     const ids = [...selectedClientIds];
     if (ids.length === 0) return;
@@ -251,6 +271,7 @@ export function ClientsList() {
     if (succeeded.size !== ids.length) {
       alert("חלק מהלקוחות לא הועברו לסל מחזור.");
     }
+    void refreshClientCounts();
   }
 
   return (
@@ -275,22 +296,6 @@ export function ClientsList() {
           aria-pressed={notificationsOnly}
         >
           {notificationsOnly ? "רגיל" : "התראות"}
-        </button>
-
-        <button
-          type="button"
-          className="btn btn-secondary text-sm"
-          aria-pressed={showRecycleBin}
-          disabled={selectionMode}
-          onClick={() => {
-            setShowRecycleBin((v) => !v);
-            setNotificationsOnly(false);
-            setActionChooserOpen(false);
-            setSelectionMode(false);
-            setSelectedClientIds([]);
-          }}
-        >
-          סל מחזור
         </button>
 
         {!showRecycleBin && !selectionMode ? (
@@ -525,7 +530,6 @@ export function ClientsList() {
               {(
                 [
                   { key: "export" as const, label: "ייצוא" },
-                  { key: "whatsapp" as const, label: "וואטסאפ" },
                   { key: "delete" as const, label: "מחיקה" },
                 ] as const
               ).map((opt) => {
@@ -588,8 +592,6 @@ export function ClientsList() {
                 disabled={bulkBusy}
                 onClick={() => {
                   setConfirmBulkActionOpen(false);
-                  waBulkRecipientIdsRef.current = null;
-                  setWhatsappRecipientsSnapshot(null);
                   setSelectionMode(false);
                   setSelectedClientIds([]);
                 }}
@@ -610,11 +612,6 @@ export function ClientsList() {
                       for (const id of idsSnapshot) {
                         window.open(`/api/export/single?householdId=${id}`, "_blank");
                       }
-                    } else if (bulkAction === "whatsapp") {
-                      waBulkRecipientIdsRef.current = idsSnapshot;
-                      setWhatsappRecipientsSnapshot(idsSnapshot);
-                      setWhatsappMessage("");
-                      setWhatsappModalOpen(true);
                     } else if (bulkAction === "delete") {
                       await moveSelectedToRecycleBin();
                     }
@@ -624,96 +621,9 @@ export function ClientsList() {
 
                   setSelectionMode(false);
                   setSelectedClientIds([]);
-
-                  if (bulkAction !== "whatsapp") {
-                    waBulkRecipientIdsRef.current = null;
-                    setWhatsappRecipientsSnapshot(null);
-                  }
                 }}
               >
                 כן
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {whatsappModalOpen ? (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-          role="dialog"
-          aria-modal="true"
-          dir="rtl"
-        >
-          <div className="card p-6 max-w-md w-full shadow-lg space-y-4">
-            <p className="text-sm text-ink-800">מהי ההודעה?</p>
-            <textarea
-              className="input min-h-[6rem] w-full resize-y py-2"
-              value={whatsappMessage}
-              onChange={(e) => setWhatsappMessage(e.target.value)}
-              placeholder="כתוב הודעה…"
-              dir="rtl"
-            />
-            <div className="flex flex-wrap justify-end gap-2 pt-2">
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => {
-                  setWhatsappModalOpen(false);
-                  waBulkRecipientIdsRef.current = null;
-                  setWhatsappRecipientsSnapshot(null);
-                }}
-              >
-                בטל
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={bulkBusy}
-                onClick={() => {
-                  const whatsappMessageText = whatsappMessage.trim();
-                  if (!whatsappMessageText) {
-                    alert("נא להזין הודעה");
-                    return;
-                  }
-                  const recipientIdsCopy = [
-                    ...(waBulkRecipientIdsRef.current ?? whatsappRecipientsSnapshot ?? selectedClientIds),
-                  ];
-                  waBulkRecipientIdsRef.current = null;
-
-                  if (recipientIdsCopy.length === 0) {
-                    alert("לא נמצאו לקוחות לשליחה.");
-                    setWhatsappModalOpen(false);
-                    setWhatsappMessage("");
-                    setWhatsappRecipientsSnapshot(null);
-                    return;
-                  }
-
-                  let hasOpened = false;
-                  for (const id of recipientIdsCopy) {
-                    const h = allHouseholds.find((x) => x.id === id);
-                    if (!h) continue;
-                    const wa = getWaNumberForHousehold(h);
-                    if (!wa) continue;
-                    const url = `https://wa.me/${wa}?text=${encodeURIComponent(whatsappMessageText)}`;
-                    window.open(url, "_blank", "noopener,noreferrer");
-                    hasOpened = true;
-                  }
-
-                  if (!hasOpened) {
-                    alert("לא נמצאו מספרי טלפון תקינים עבור הבחירה.");
-                    setWhatsappModalOpen(false);
-                    setWhatsappMessage("");
-                    setWhatsappRecipientsSnapshot(null);
-                    return;
-                  }
-
-                  setWhatsappModalOpen(false);
-                  setWhatsappMessage("");
-                  setWhatsappRecipientsSnapshot(null);
-                }}
-              >
-                שלח
               </button>
             </div>
           </div>
