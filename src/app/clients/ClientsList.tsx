@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition, useMemo } from "react";
+import { useState, useEffect, useTransition, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Search } from "lucide-react";
@@ -174,6 +174,9 @@ export function ClientsList() {
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
   const [whatsappMessage, setWhatsappMessage] = useState("");
   const [whatsappRecipientsSnapshot, setWhatsappRecipientsSnapshot] = useState<number[] | null>(null);
+  /** Set synchronously when bulk WhatsApp is confirmed; survives empty `selectedClientIds` and avoids stale snapshot closure. */
+  const waBulkRecipientIdsRef = useRef<number[] | null>(null);
+  const waFlowMessageRef = useRef("");
   const [waFlowOpen, setWaFlowOpen] = useState(false);
   const [waFlowIndex, setWaFlowIndex] = useState(0);
   const [waCurrentMessage, setWaCurrentMessage] = useState("");
@@ -248,7 +251,8 @@ export function ClientsList() {
       return;
     }
 
-    const recipientIds = whatsappRecipientsSnapshot ?? selectedClientIds;
+    const recipientIds =
+      waBulkRecipientIdsRef.current ?? whatsappRecipientsSnapshot ?? selectedClientIds;
     if (recipientIds.length === 0) {
       alert("לא נמצאו לקוחות לשליחה.");
       return;
@@ -269,12 +273,22 @@ export function ClientsList() {
       return;
     }
 
+    waBulkRecipientIdsRef.current = null;
+    waFlowMessageRef.current = trimmed;
     setWaCurrentMessage(trimmed);
     setWaQueue(queue);
     setWaFlowIndex(0);
     setWaFlowOpen(true);
-    // Open ONLY the first valid recipient.
     openWhatsAppForWaNumber(queue[0].wa, trimmed);
+  }
+
+  function closeWhatsAppBulkFlow() {
+    waFlowMessageRef.current = "";
+    waBulkRecipientIdsRef.current = null;
+    setWaFlowOpen(false);
+    setWaQueue([]);
+    setWaFlowIndex(0);
+    setWaCurrentMessage("");
   }
 
   async function moveSelectedToRecycleBin() {
@@ -631,6 +645,7 @@ export function ClientsList() {
                 disabled={bulkBusy}
                 onClick={() => {
                   setConfirmBulkActionOpen(false);
+                  waBulkRecipientIdsRef.current = null;
                   setWhatsappRecipientsSnapshot(null);
                   setSelectionMode(false);
                   setSelectedClientIds([]);
@@ -652,6 +667,7 @@ export function ClientsList() {
                         window.open(`/api/export/single?householdId=${id}`, "_blank");
                       }
                     } else if (pendingBulkAction === "whatsapp") {
+                      waBulkRecipientIdsRef.current = idsSnapshot;
                       setWhatsappRecipientsSnapshot(idsSnapshot);
                       setWhatsappMessage("");
                       setWhatsappModalOpen(true);
@@ -668,6 +684,7 @@ export function ClientsList() {
 
                   // For WhatsApp: snapshot must remain until user presses שלח/בטל.
                   if (pendingBulkAction !== "whatsapp") {
+                    waBulkRecipientIdsRef.current = null;
                     setWhatsappRecipientsSnapshot(null);
                   }
                 }}
@@ -701,6 +718,7 @@ export function ClientsList() {
                 className="btn btn-ghost"
                 onClick={() => {
                   setWhatsappModalOpen(false);
+                  waBulkRecipientIdsRef.current = null;
                   setWhatsappRecipientsSnapshot(null);
                 }}
               >
@@ -711,12 +729,11 @@ export function ClientsList() {
                 className="btn btn-primary"
                 disabled={bulkBusy}
                 onClick={() => {
-                  // Close the textarea modal and start the sequential flow.
+                  const msg = whatsappMessage.trim();
                   setWhatsappModalOpen(false);
                   setWhatsappMessage("");
-                  const msg = whatsappMessage.trim();
-                  startWhatsAppSequentialFlow(msg);
                   setWhatsappRecipientsSnapshot(null);
+                  startWhatsAppSequentialFlow(msg);
                 }}
               >
                 שלח
@@ -752,15 +769,12 @@ export function ClientsList() {
                       onClick={() => {
                         const nextIndex = waFlowIndex + 1;
                         if (nextIndex >= waQueue.length) {
-                          setWaFlowOpen(false);
-                          setWaQueue([]);
-                          setWaFlowIndex(0);
-                          setWaCurrentMessage("");
+                          closeWhatsAppBulkFlow();
                           return;
                         }
                         setWaFlowIndex(nextIndex);
                         const next = waQueue[nextIndex];
-                        if (next) openWhatsAppForWaNumber(next.wa, waCurrentMessage);
+                        if (next) openWhatsAppForWaNumber(next.wa, waFlowMessageRef.current);
                       }}
                     >
                       הבא
@@ -769,10 +783,7 @@ export function ClientsList() {
                       type="button"
                       className="btn btn-ghost text-sm"
                       onClick={() => {
-                        setWaFlowOpen(false);
-                        setWaQueue([]);
-                        setWaFlowIndex(0);
-                        setWaCurrentMessage("");
+                        closeWhatsAppBulkFlow();
                       }}
                     >
                       סיום
