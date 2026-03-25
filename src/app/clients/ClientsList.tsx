@@ -174,13 +174,8 @@ export function ClientsList() {
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
   const [whatsappMessage, setWhatsappMessage] = useState("");
   const [whatsappRecipientsSnapshot, setWhatsappRecipientsSnapshot] = useState<number[] | null>(null);
-  /** Set synchronously when bulk WhatsApp is confirmed; survives empty `selectedClientIds` and avoids stale snapshot closure. */
+  /** Set synchronously when bulk WhatsApp is confirmed; survives empty `selectedClientIds`. */
   const waBulkRecipientIdsRef = useRef<number[] | null>(null);
-  const waFlowMessageRef = useRef("");
-  const [waFlowOpen, setWaFlowOpen] = useState(false);
-  const [waFlowIndex, setWaFlowIndex] = useState(0);
-  const [waCurrentMessage, setWaCurrentMessage] = useState("");
-  const [waQueue, setWaQueue] = useState<{ id: number; name: string; wa: string }[]>([]);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [confirmBulkActionOpen, setConfirmBulkActionOpen] = useState(false);
 
@@ -244,51 +239,41 @@ export function ClientsList() {
     window.open(url, "_blank");
   }
 
-  function startWhatsAppSequentialFlow(message: string) {
+  /**
+   * Bulk WhatsApp: one message, one tab per valid phone, selection order.
+   * IDs are passed in explicitly from the "שלח" click (no reliance on selection state after confirm).
+   */
+  async function openWhatsAppBulkForAllClients(message: string, recipientIds: number[]) {
     const trimmed = message.trim();
     if (!trimmed) {
       alert("נא להזין הודעה");
       return;
     }
-
-    const recipientIds =
-      waBulkRecipientIdsRef.current ?? whatsappRecipientsSnapshot ?? selectedClientIds;
     if (recipientIds.length === 0) {
       alert("לא נמצאו לקוחות לשליחה.");
       return;
     }
 
-    const queue = recipientIds
-      .map((id) => {
-        const h = allHouseholds.find((x) => x.id === id);
-        if (!h) return null;
-        const wa = getWaNumberForHousehold(h);
-        if (!wa) return null;
-        return { id, name: getRegisteredPartnerName(h), wa };
-      })
-      .filter((x): x is { id: number; name: string; wa: string } => x != null);
+    const delayMs = 300;
+    let opened = 0;
 
-    if (queue.length === 0) {
-      alert("לא נמצאו מספרי טלפון תקינים עבור הבחירה.");
-      return;
+    for (let i = 0; i < recipientIds.length; i++) {
+      const id = recipientIds[i];
+      const h = allHouseholds.find((x) => x.id === id);
+      if (!h) continue;
+      const wa = getWaNumberForHousehold(h);
+      if (!wa) continue;
+
+      if (opened > 0) {
+        await new Promise((r) => setTimeout(r, delayMs));
+      }
+      openWhatsAppForWaNumber(wa, trimmed);
+      opened++;
     }
 
-    waBulkRecipientIdsRef.current = null;
-    waFlowMessageRef.current = trimmed;
-    setWaCurrentMessage(trimmed);
-    setWaQueue(queue);
-    setWaFlowIndex(0);
-    setWaFlowOpen(true);
-    openWhatsAppForWaNumber(queue[0].wa, trimmed);
-  }
-
-  function closeWhatsAppBulkFlow() {
-    waFlowMessageRef.current = "";
-    waBulkRecipientIdsRef.current = null;
-    setWaFlowOpen(false);
-    setWaQueue([]);
-    setWaFlowIndex(0);
-    setWaCurrentMessage("");
+    if (opened === 0) {
+      alert("לא נמצאו מספרי טלפון תקינים עבור הבחירה.");
+    }
   }
 
   async function moveSelectedToRecycleBin() {
@@ -730,68 +715,19 @@ export function ClientsList() {
                 disabled={bulkBusy}
                 onClick={() => {
                   const msg = whatsappMessage.trim();
+                  const recipientIdsCopy = [
+                    ...(waBulkRecipientIdsRef.current ?? whatsappRecipientsSnapshot ?? selectedClientIds),
+                  ];
+                  waBulkRecipientIdsRef.current = null;
                   setWhatsappModalOpen(false);
                   setWhatsappMessage("");
                   setWhatsappRecipientsSnapshot(null);
-                  startWhatsAppSequentialFlow(msg);
+                  void openWhatsAppBulkForAllClients(msg, recipientIdsCopy);
                 }}
               >
                 שלח
               </button>
             </div>
-          </div>
-        </div>
-      ) : null}
-
-      {waFlowOpen ? (
-        <div className="fixed bottom-4 right-4 z-[120]" dir="rtl">
-          <div className="card p-4 shadow-lg">
-            {(() => {
-              const current = waQueue[waFlowIndex];
-              const total = waQueue.length;
-              return (
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-xs text-ink-500">לקוח נוכחי</div>
-                      <div className="truncate text-sm font-medium text-ink-800">{current?.name ?? "—"}</div>
-                    </div>
-                    <div className="shrink-0 text-xs text-ink-500 tabular-nums">
-                      {total === 0 ? "0/0" : `${waFlowIndex + 1}/${total}`}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    <button
-                      type="button"
-                      className="btn btn-secondary text-sm"
-                      disabled={waFlowIndex >= waQueue.length - 1}
-                      onClick={() => {
-                        const nextIndex = waFlowIndex + 1;
-                        if (nextIndex >= waQueue.length) {
-                          closeWhatsAppBulkFlow();
-                          return;
-                        }
-                        setWaFlowIndex(nextIndex);
-                        const next = waQueue[nextIndex];
-                        if (next) openWhatsAppForWaNumber(next.wa, waFlowMessageRef.current);
-                      }}
-                    >
-                      הבא
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-ghost text-sm"
-                      onClick={() => {
-                        closeWhatsAppBulkFlow();
-                      }}
-                    >
-                      סיום
-                    </button>
-                  </div>
-                </div>
-              );
-            })()}
           </div>
         </div>
       ) : null}
