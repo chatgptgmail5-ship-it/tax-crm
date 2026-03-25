@@ -170,6 +170,9 @@ export function ClientsList() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedClientIds, setSelectedClientIds] = useState<number[]>([]);
   const selectedSet = useMemo(() => new Set(selectedClientIds), [selectedClientIds]);
+  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+  const [whatsappMessage, setWhatsappMessage] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   function toggleSelectedClient(id: number) {
     setSelectedClientIds((prev) => {
@@ -213,6 +216,45 @@ export function ClientsList() {
     });
   }
 
+  function exportSelectedHouseholds() {
+    // Use the existing single export system; trigger downloads for selected households.
+    for (const id of selectedClientIds) {
+      window.open(`/api/export/single?householdId=${id}`, "_blank");
+    }
+  }
+
+  function getWaNumberForHousehold(h: Household): string | null {
+    const raw = getPhoneRaw(h);
+    return raw ? normalizeIsraeliPhoneForWa(raw) : null;
+  }
+
+  function sendWhatsAppToSelected(message: string) {
+    const trimmed = message.trim();
+    if (!trimmed) {
+      alert("נא להזין הודעה");
+      return;
+    }
+    let sentCount = 0;
+    for (const id of selectedClientIds) {
+      const h = allHouseholds.find((x) => x.id === id);
+      if (!h) continue;
+      const wa = getWaNumberForHousehold(h);
+      if (!wa) continue;
+      const url = `https://wa.me/${wa}?text=${encodeURIComponent(trimmed)}`;
+      window.open(url, "_blank");
+      sentCount++;
+    }
+    if (sentCount === 0) {
+      alert("לא נמצאו מספרי טלפון תקינים עבור הבחירה.");
+    }
+  }
+
+  function moveSelectedToRecycleBin() {
+    // No permanent delete in this step: just remove from the current main list UI.
+    // (Future: persist to a dedicated recycle-bin system.)
+    setAllHouseholds((prev) => prev.filter((h) => !selectedSet.has(h.id)));
+  }
+
   return (
     <div className="space-y-4">
       <div className="relative">
@@ -249,9 +291,34 @@ export function ClientsList() {
           <button
             type="button"
             className="btn btn-secondary text-sm"
-            onClick={() => {
-              setSelectionMode(false);
-              setSelectedClientIds([]);
+            disabled={bulkBusy}
+            onClick={async () => {
+              if (selectedClientIds.length === 0) {
+                alert("יש לבחור לפחות לקוח אחד.");
+                return;
+              }
+              setBulkBusy(true);
+              try {
+                if (pendingBulkAction === "export") {
+                  exportSelectedHouseholds();
+                  setSelectionMode(false);
+                  setSelectedClientIds([]);
+                  return;
+                }
+                if (pendingBulkAction === "whatsapp") {
+                  setWhatsappMessage("");
+                  setWhatsappModalOpen(true);
+                  return;
+                }
+                if (pendingBulkAction === "delete") {
+                  moveSelectedToRecycleBin();
+                  setSelectionMode(false);
+                  setSelectedClientIds([]);
+                  return;
+                }
+              } finally {
+                setBulkBusy(false);
+              }
             }}
           >
             סיים
@@ -491,6 +558,51 @@ export function ClientsList() {
                 }}
               >
                 בחר
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {whatsappModalOpen ? (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          dir="rtl"
+        >
+          <div className="card p-6 max-w-md w-full shadow-lg space-y-4">
+            <p className="text-sm text-ink-800">מהי ההודעה?</p>
+            <textarea
+              className="input min-h-[6rem] w-full resize-y py-2"
+              value={whatsappMessage}
+              onChange={(e) => setWhatsappMessage(e.target.value)}
+              placeholder="כתוב הודעה…"
+              dir="rtl"
+            />
+            <div className="flex flex-wrap justify-end gap-2 pt-2">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  setWhatsappModalOpen(false);
+                }}
+              >
+                בטל
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={bulkBusy}
+                onClick={() => {
+                  sendWhatsAppToSelected(whatsappMessage);
+                  setWhatsappModalOpen(false);
+                  setSelectionMode(false);
+                  setSelectedClientIds([]);
+                  setWhatsappMessage("");
+                }}
+              >
+                שלח
               </button>
             </div>
           </div>
