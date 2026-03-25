@@ -174,6 +174,10 @@ export function ClientsList() {
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
   const [whatsappMessage, setWhatsappMessage] = useState("");
   const [whatsappRecipientsSnapshot, setWhatsappRecipientsSnapshot] = useState<number[] | null>(null);
+  const [waFlowOpen, setWaFlowOpen] = useState(false);
+  const [waFlowIndex, setWaFlowIndex] = useState(0);
+  const [waCurrentMessage, setWaCurrentMessage] = useState("");
+  const [waQueue, setWaQueue] = useState<{ id: number; name: string; wa: string }[]>([]);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [confirmBulkActionOpen, setConfirmBulkActionOpen] = useState(false);
 
@@ -232,30 +236,45 @@ export function ClientsList() {
     return raw ? normalizeIsraeliPhoneForWa(raw) : null;
   }
 
-  function sendWhatsAppToSelected(message: string) {
+  function openWhatsAppForWaNumber(waNumber: string, message: string) {
+    const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
+  }
+
+  function startWhatsAppSequentialFlow(message: string) {
     const trimmed = message.trim();
     if (!trimmed) {
       alert("נא להזין הודעה");
       return;
     }
+
     const recipientIds = whatsappRecipientsSnapshot ?? selectedClientIds;
     if (recipientIds.length === 0) {
       alert("לא נמצאו לקוחות לשליחה.");
       return;
     }
-    let sentCount = 0;
-    for (const id of recipientIds) {
-      const h = allHouseholds.find((x) => x.id === id);
-      if (!h) continue;
-      const wa = getWaNumberForHousehold(h);
-      if (!wa) continue;
-      const url = `https://wa.me/${wa}?text=${encodeURIComponent(trimmed)}`;
-      window.open(url, "_blank");
-      sentCount++;
-    }
-    if (sentCount === 0) {
+
+    const queue = recipientIds
+      .map((id) => {
+        const h = allHouseholds.find((x) => x.id === id);
+        if (!h) return null;
+        const wa = getWaNumberForHousehold(h);
+        if (!wa) return null;
+        return { id, name: getRegisteredPartnerName(h), wa };
+      })
+      .filter((x): x is { id: number; name: string; wa: string } => x != null);
+
+    if (queue.length === 0) {
       alert("לא נמצאו מספרי טלפון תקינים עבור הבחירה.");
+      return;
     }
+
+    setWaCurrentMessage(trimmed);
+    setWaQueue(queue);
+    setWaFlowIndex(0);
+    setWaFlowOpen(true);
+    // Open ONLY the first valid recipient.
+    openWhatsAppForWaNumber(queue[0].wa, trimmed);
   }
 
   async function moveSelectedToRecycleBin() {
@@ -692,17 +711,76 @@ export function ClientsList() {
                 className="btn btn-primary"
                 disabled={bulkBusy}
                 onClick={() => {
-                  sendWhatsAppToSelected(whatsappMessage);
+                  // Close the textarea modal and start the sequential flow.
                   setWhatsappModalOpen(false);
-                  setSelectionMode(false);
-                  setSelectedClientIds([]);
                   setWhatsappMessage("");
+                  const msg = whatsappMessage.trim();
+                  startWhatsAppSequentialFlow(msg);
                   setWhatsappRecipientsSnapshot(null);
                 }}
               >
                 שלח
               </button>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {waFlowOpen ? (
+        <div className="fixed bottom-4 right-4 z-[120]" dir="rtl">
+          <div className="card p-4 shadow-lg">
+            {(() => {
+              const current = waQueue[waFlowIndex];
+              const total = waQueue.length;
+              return (
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-xs text-ink-500">לקוח נוכחי</div>
+                      <div className="truncate text-sm font-medium text-ink-800">{current?.name ?? "—"}</div>
+                    </div>
+                    <div className="shrink-0 text-xs text-ink-500 tabular-nums">
+                      {total === 0 ? "0/0" : `${waFlowIndex + 1}/${total}`}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-secondary text-sm"
+                      disabled={waFlowIndex >= waQueue.length - 1}
+                      onClick={() => {
+                        const nextIndex = waFlowIndex + 1;
+                        if (nextIndex >= waQueue.length) {
+                          setWaFlowOpen(false);
+                          setWaQueue([]);
+                          setWaFlowIndex(0);
+                          setWaCurrentMessage("");
+                          return;
+                        }
+                        setWaFlowIndex(nextIndex);
+                        const next = waQueue[nextIndex];
+                        if (next) openWhatsAppForWaNumber(next.wa, waCurrentMessage);
+                      }}
+                    >
+                      הבא
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost text-sm"
+                      onClick={() => {
+                        setWaFlowOpen(false);
+                        setWaQueue([]);
+                        setWaFlowIndex(0);
+                        setWaCurrentMessage("");
+                      }}
+                    >
+                      סיום
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       ) : null}
