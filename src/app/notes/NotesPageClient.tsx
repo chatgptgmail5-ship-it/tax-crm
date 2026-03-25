@@ -102,17 +102,16 @@ export function NotesPageClient() {
   const displayedOpen =
     filterPriority === null ? notesOpen : notesOpen.filter((n) => n.priority === filterPriority);
 
+  const displayedArchived =
+    filterPriority === null ? notesArchived : notesArchived.filter((n) => n.priority === filterPriority);
+
   function cancelCreateDraft() {
     setCreating(false);
     setDraftContent("");
     setShowPriorityModal(false);
   }
 
-  function handleToggleCreate() {
-    if (!creating) {
-      setCreating(true);
-      return;
-    }
+  function finishCreateDraft() {
     const trimmed = draftContent.trim();
     if (!trimmed) {
       alert("הזן תוכן להערה");
@@ -279,11 +278,16 @@ export function NotesPageClient() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           {canEdit && view === "main" ? (
-            <button type="button" className="btn btn-primary text-sm" onClick={handleToggleCreate}>
-              {creating ? "סגור הערה" : "צור הערה"}
+            <button
+              type="button"
+              className="btn btn-primary text-sm"
+              disabled={creating}
+              onClick={() => setCreating(true)}
+            >
+              צור הערה
             </button>
           ) : null}
-          {view === "main" ? (
+          {view === "main" || view === "archive" ? (
             filterPriority === null ? (
               <div className="relative">
                 <button
@@ -326,7 +330,7 @@ export function NotesPageClient() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="btn btn-secondary text-sm"
+            className="btn btn-primary text-sm"
             onClick={() => {
               setView((v) => (v === "archive" ? "main" : "archive"));
               setFilterPickerOpen(false);
@@ -349,9 +353,14 @@ export function NotesPageClient() {
             onChange={(e) => setDraftContent(e.target.value)}
             dir="rtl"
           />
-          <button type="button" className="btn btn-ghost text-sm" onClick={cancelCreateDraft}>
-            בטל
-          </button>
+          <div className="flex items-center justify-between gap-2">
+            <button type="button" className="btn btn-primary text-sm" onClick={finishCreateDraft}>
+              סיים
+            </button>
+            <button type="button" className="btn btn-ghost text-sm" onClick={cancelCreateDraft}>
+              בטל
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -362,9 +371,13 @@ export function NotesPageClient() {
           <div className="card p-6">
             <p className="text-center text-ink-500">אין הערות בארכיון</p>
           </div>
+        ) : displayedArchived.length === 0 ? (
+          <div className="card p-6">
+            <p className="text-center text-ink-500">אין הערות התואמות לסינון</p>
+          </div>
         ) : (
           <ul className="space-y-4">
-            {notesArchived.map((n) => (
+            {displayedArchived.map((n) => (
               <li key={n.id} className="card flex min-w-0 overflow-hidden p-0">
                 <div
                   className={`w-1.5 shrink-0 self-stretch rounded-s-lg ${priorityStripClass(n.priority)}`}
