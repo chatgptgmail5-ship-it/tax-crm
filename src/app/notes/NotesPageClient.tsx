@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useCanEdit } from "@/hooks/useCanEdit";
+import { formatDateTime } from "@/lib/utils";
 
 type Priority = "low" | "medium" | "high";
 
@@ -387,6 +388,9 @@ export function NotesPageClient() {
                 />
                 <div className="min-w-0 flex-1 p-4">
                   <p className="text-sm whitespace-pre-wrap text-ink-900">{n.content}</p>
+                  <p className="text-right text-xs text-ink-500 tabular-nums mt-1" dir="rtl">
+                    {formatDateTime(n.createdAt)}
+                  </p>
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
                     <span className={priorityBadgeClass(n.priority)}>
                       {(PRIORITY_LABELS as Record<string, string>)[n.priority] ?? n.priority}
@@ -437,6 +441,9 @@ export function NotesPageClient() {
               <div className="min-w-0 flex-1 p-4">
                 {editingId === n.id ? (
                   <div className="space-y-3">
+                    <p className="text-right text-xs text-ink-500 tabular-nums" dir="rtl">
+                      {formatDateTime(n.createdAt)}
+                    </p>
                     <textarea
                       className="input min-h-[6rem] w-full resize-y py-2"
                       value={editDraft}
@@ -468,6 +475,9 @@ export function NotesPageClient() {
                 ) : (
                   <>
                     <p className="text-sm whitespace-pre-wrap text-ink-900">{n.content}</p>
+                    <p className="text-right text-xs text-ink-500 tabular-nums mt-1" dir="rtl">
+                      {formatDateTime(n.createdAt)}
+                    </p>
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
                       <span className={priorityBadgeClass(n.priority)}>
                         {(PRIORITY_LABELS as Record<string, string>)[n.priority] ?? n.priority}
