@@ -10,20 +10,32 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q")?.trim() ?? "";
+    const showDeleted = searchParams.get("deleted") === "1" || searchParams.get("deleted") === "true";
+
+    // Auto cleanup: permanently delete households that have been in the recycle bin for 30+ days.
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    await (prisma.household as any).deleteMany({
+      where: {
+        deletedAt: { not: null, lt: cutoff },
+      },
+    });
 
     const households = await prisma.household.findMany({
-      where: q
-        ? {
-            OR: [
-              { internalId: { contains: q } },
-              { persons: { some: { firstName: { contains: q } } } },
-              { persons: { some: { lastName: { contains: q } } } },
-              { persons: { some: { idNumber: { contains: q } } } },
-              { persons: { some: { phone: { contains: q } } } },
-              { persons: { some: { email: { contains: q } } } },
-            ],
-          }
-        : undefined,
+      where: {
+        ...(q
+          ? {
+              OR: [
+                { internalId: { contains: q } },
+                { persons: { some: { firstName: { contains: q } } } },
+                { persons: { some: { lastName: { contains: q } } } },
+                { persons: { some: { idNumber: { contains: q } } } },
+                { persons: { some: { phone: { contains: q } } } },
+                { persons: { some: { email: { contains: q } } } },
+              ],
+            }
+          : {}),
+        ...(showDeleted ? { deletedAt: { not: null } } : { deletedAt: null }),
+      } as any,
       orderBy: { createdAt: "desc" },
       include: {
         agent: { select: { name: true } },

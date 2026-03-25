@@ -76,6 +76,9 @@ model Household {
   internalId              String?                  @map("internal_id")
   cp                      Float?
   cp2                     Float?
+  /// Soft delete (recycle bin).
+  /// When set, this household is hidden from the main clients list and appears in the recycle bin.
+  deletedAt              DateTime?                @map("deleted_at")
   houseNumber             String?                  @map("house_number")
   street                  String?
   generatedDocuments      GeneratedDocument[]

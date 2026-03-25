@@ -185,7 +185,11 @@ export async function DELETE(
     const { id } = await params;
     const householdId = parseInt(id, 10);
     if (isNaN(householdId)) return NextResponse.json({ error: "מזהה לא תקין" }, { status: 400 });
-    await prisma.household.delete({ where: { id: householdId } });
+    // Soft delete into recycle bin (no permanent delete yet).
+    await (prisma.household as any).update({
+      where: { id: householdId },
+      data: { deletedAt: new Date() },
+    });
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error(e);

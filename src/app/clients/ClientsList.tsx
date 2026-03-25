@@ -162,6 +162,7 @@ export function ClientsList() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [notificationsOnly, setNotificationsOnly] = useState(false);
+  const [showRecycleBin, setShowRecycleBin] = useState(false);
 
   // Bulk selection UI only (no action execution yet).
   type BulkAction = "export" | "whatsapp" | "delete";
@@ -187,7 +188,8 @@ export function ClientsList() {
     setLoading(true);
     (async () => {
       try {
-        const res = await fetch("/api/households");
+        const url = showRecycleBin ? "/api/households?deleted=1" : "/api/households";
+        const res = await fetch(url);
         const data = await res.json();
         if (!cancelled) setAllHouseholds(Array.isArray(data) ? data : []);
       } catch {
@@ -199,15 +201,15 @@ export function ClientsList() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [showRecycleBin]);
 
   const filteredHouseholds = useMemo(() => {
     let list = allHouseholds;
-    if (notificationsOnly) {
+    if (!showRecycleBin && notificationsOnly) {
       list = list.filter((h) => unreadSet.has(h.id));
     }
     return list.filter((h) => householdMatchesSearch(h, search));
-  }, [allHouseholds, notificationsOnly, search, unreadSet]);
+  }, [allHouseholds, notificationsOnly, search, unreadSet, showRecycleBin]);
 
   function goToClient(id: number) {
     setPendingClientId(id);
@@ -249,10 +251,23 @@ export function ClientsList() {
     }
   }
 
-  function moveSelectedToRecycleBin() {
-    // No permanent delete in this step: just remove from the current main list UI.
-    // (Future: persist to a dedicated recycle-bin system.)
-    setAllHouseholds((prev) => prev.filter((h) => !selectedSet.has(h.id)));
+  async function moveSelectedToRecycleBin() {
+    const ids = [...selectedClientIds];
+    if (ids.length === 0) return;
+
+    const succeeded = new Set<number>();
+    for (const id of ids) {
+      const res = await fetch(`/api/households/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        succeeded.add(id);
+      }
+    }
+
+    setAllHouseholds((prev) => prev.filter((h) => !succeeded.has(h.id)));
+
+    if (succeeded.size !== ids.length) {
+      alert("חלק מהלקוחות לא הועברו לסל מחזור.");
+    }
   }
 
   return (
@@ -279,7 +294,23 @@ export function ClientsList() {
           {notificationsOnly ? "רגיל" : "התראות"}
         </button>
 
-        {!selectionMode ? (
+        <button
+          type="button"
+          className="btn btn-secondary text-sm"
+          aria-pressed={showRecycleBin}
+          disabled={selectionMode}
+          onClick={() => {
+            setShowRecycleBin((v) => !v);
+            setNotificationsOnly(false);
+            setActionChooserOpen(false);
+            setSelectionMode(false);
+            setSelectedClientIds([]);
+          }}
+        >
+          סל מחזור
+        </button>
+
+        {!showRecycleBin && !selectionMode ? (
           <button
             type="button"
             className="btn btn-secondary text-sm"
@@ -287,7 +318,9 @@ export function ClientsList() {
           >
             בחירה
           </button>
-        ) : (
+        ) : null}
+
+        {!showRecycleBin && selectionMode ? (
           <button
             type="button"
             className="btn btn-secondary text-sm"
@@ -311,7 +344,7 @@ export function ClientsList() {
                   return;
                 }
                 if (pendingBulkAction === "delete") {
-                  moveSelectedToRecycleBin();
+                  await moveSelectedToRecycleBin();
                   setSelectionMode(false);
                   setSelectedClientIds([]);
                   return;
@@ -323,7 +356,7 @@ export function ClientsList() {
           >
             סיים
           </button>
-        )}
+        ) : null}
       </div>
 
       <div className="card overflow-hidden">
@@ -383,6 +416,7 @@ export function ClientsList() {
                       pendingClientId === h.id && "bg-primary-50/70"
                     )}
                     onClick={(e) => {
+                      if (showRecycleBin) return;
                       if (selectionMode) return;
                       if ((e.target as HTMLElement).closest("a[href], button")) return;
                       goToClient(h.id);
@@ -431,14 +465,18 @@ export function ClientsList() {
                               aria-hidden
                             />
                           ) : null}
-                          <Link
-                            href={`/clients/${h.id}`}
-                            prefetch
-                            onClick={() => setPendingClientId(h.id)}
-                            className="font-medium text-primary-700 hover:text-primary-600 hover:underline"
-                          >
-                            {getRegisteredPartnerName(h)}
-                          </Link>
+                          {showRecycleBin ? (
+                            <span className="font-medium text-ink-500">{getRegisteredPartnerName(h)}</span>
+                          ) : (
+                            <Link
+                              href={`/clients/${h.id}`}
+                              prefetch
+                              onClick={() => setPendingClientId(h.id)}
+                              className="font-medium text-primary-700 hover:text-primary-600 hover:underline"
+                            >
+                              {getRegisteredPartnerName(h)}
+                            </Link>
+                          )}
                         </span>
                       )}
                     </td>
@@ -486,14 +524,20 @@ export function ClientsList() {
                       })()}
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <Link
-                        href={`/clients/${h.id}`}
-                        prefetch
-                        onClick={() => setPendingClientId(h.id)}
-                        className="text-primary-600 hover:underline"
-                      >
-                        צפה
-                      </Link>
+                      {showRecycleBin ? (
+                        <span className="text-ink-300" aria-disabled>
+                          צפה
+                        </span>
+                      ) : (
+                        <Link
+                          href={`/clients/${h.id}`}
+                          prefetch
+                          onClick={() => setPendingClientId(h.id)}
+                          className="text-primary-600 hover:underline"
+                        >
+                          צפה
+                        </Link>
+                      )}
                     </td>
                   </tr>
                 ))
