@@ -35,6 +35,14 @@ function priorityBadgeClass(priority: string): string {
   return "rounded-full bg-ink-100 px-2 py-0.5 text-ink-700";
 }
 
+/** Vertical strip on card inline-start (physical right in RTL). */
+function priorityStripClass(priority: string): string {
+  if (priority === "low") return "bg-emerald-500";
+  if (priority === "medium") return "bg-amber-500";
+  if (priority === "high") return "bg-red-500";
+  return "bg-ink-300";
+}
+
 function notifyNotesChanged() {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("notes-changed"));
@@ -58,6 +66,7 @@ export function NotesPageClient() {
   const [pendingArchiveId, setPendingArchiveId] = useState<number | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [pendingRestoreId, setPendingRestoreId] = useState<number | null>(null);
+  const [pendingArchiveDeleteId, setPendingArchiveDeleteId] = useState<number | null>(null);
 
   const fetchOpen = useCallback(async () => {
     const res = await fetch("/api/notes?status=open");
@@ -224,8 +233,7 @@ export function NotesPageClient() {
     }
   }
 
-  async function runDelete(id: number) {
-    setPendingDeleteId(null);
+  async function deleteNoteById(id: number) {
     setSavingId(id);
     try {
       const res = await fetch(`/api/notes/${id}`, { method: "DELETE" });
@@ -243,6 +251,18 @@ export function NotesPageClient() {
     } finally {
       setSavingId(null);
     }
+  }
+
+  async function runDelete(id: number) {
+    setPendingDeleteId(null);
+    await deleteNoteById(id);
+  }
+
+  async function confirmArchiveDelete() {
+    if (pendingArchiveDeleteId == null) return;
+    const id = pendingArchiveDeleteId;
+    setPendingArchiveDeleteId(null);
+    await deleteNoteById(id);
   }
 
   function startEdit(n: NoteDto) {
@@ -345,26 +365,40 @@ export function NotesPageClient() {
         ) : (
           <ul className="space-y-4">
             {notesArchived.map((n) => (
-              <li key={n.id} className="card p-4">
-                <p className="text-sm whitespace-pre-wrap text-ink-900">{n.content}</p>
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                  <span className={priorityBadgeClass(n.priority)}>
-                    {(PRIORITY_LABELS as Record<string, string>)[n.priority] ?? n.priority}
-                  </span>
-                  <span className="rounded-full bg-ink-100 px-2 py-0.5 text-ink-600">סגורה</span>
-                </div>
-                {canEdit ? (
-                  <div className="mt-4">
-                    <button
-                      type="button"
-                      className="btn btn-secondary text-sm"
-                      disabled={savingId === n.id}
-                      onClick={() => setPendingRestoreId(n.id)}
-                    >
-                      שחזור
-                    </button>
+              <li key={n.id} className="card flex min-w-0 overflow-hidden p-0">
+                <div
+                  className={`w-1.5 shrink-0 self-stretch rounded-s-lg ${priorityStripClass(n.priority)}`}
+                  aria-hidden
+                />
+                <div className="min-w-0 flex-1 p-4">
+                  <p className="text-sm whitespace-pre-wrap text-ink-900">{n.content}</p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                    <span className={priorityBadgeClass(n.priority)}>
+                      {(PRIORITY_LABELS as Record<string, string>)[n.priority] ?? n.priority}
+                    </span>
+                    <span className="rounded-full bg-ink-100 px-2 py-0.5 text-ink-600">סגורה</span>
                   </div>
-                ) : null}
+                  {canEdit ? (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-secondary text-sm"
+                        disabled={savingId === n.id}
+                        onClick={() => setPendingRestoreId(n.id)}
+                      >
+                        שחזור
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost text-sm text-red-600 hover:text-red-700"
+                        disabled={savingId === n.id}
+                        onClick={() => setPendingArchiveDeleteId(n.id)}
+                      >
+                        מחק
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               </li>
             ))}
           </ul>
@@ -380,76 +414,82 @@ export function NotesPageClient() {
       ) : (
         <ul className="space-y-4">
           {displayedOpen.map((n) => (
-            <li key={n.id} className="card p-4">
-              {editingId === n.id ? (
-                <div className="space-y-3">
-                  <textarea
-                    className="input min-h-[6rem] w-full resize-y py-2"
-                    value={editDraft}
-                    onChange={(e) => setEditDraft(e.target.value)}
-                    dir="rtl"
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      className="btn btn-primary text-sm"
-                      disabled={savingId === n.id}
-                      onClick={() => void saveEdit(n.id)}
-                    >
-                      שמור
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-ghost text-sm"
-                      disabled={savingId === n.id}
-                      onClick={() => {
-                        setEditingId(null);
-                        setEditDraft("");
-                      }}
-                    >
-                      ביטול
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <p className="text-sm whitespace-pre-wrap text-ink-900">{n.content}</p>
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                    <span className={priorityBadgeClass(n.priority)}>
-                      {(PRIORITY_LABELS as Record<string, string>)[n.priority] ?? n.priority}
-                    </span>
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-800">פתוחה</span>
-                  </div>
-                  {canEdit ? (
-                    <div className="mt-4 flex flex-wrap gap-2">
+            <li key={n.id} className="card flex min-w-0 overflow-hidden p-0">
+              <div
+                className={`w-1.5 shrink-0 self-stretch rounded-s-lg ${priorityStripClass(n.priority)}`}
+                aria-hidden
+              />
+              <div className="min-w-0 flex-1 p-4">
+                {editingId === n.id ? (
+                  <div className="space-y-3">
+                    <textarea
+                      className="input min-h-[6rem] w-full resize-y py-2"
+                      value={editDraft}
+                      onChange={(e) => setEditDraft(e.target.value)}
+                      dir="rtl"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-primary text-sm"
+                        disabled={savingId === n.id}
+                        onClick={() => void saveEdit(n.id)}
+                      >
+                        שמור
+                      </button>
                       <button
                         type="button"
                         className="btn btn-ghost text-sm"
                         disabled={savingId === n.id}
-                        onClick={() => startEdit(n)}
+                        onClick={() => {
+                          setEditingId(null);
+                          setEditDraft("");
+                        }}
                       >
-                        ערוך
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-ghost text-sm text-red-600 hover:text-red-700"
-                        disabled={savingId === n.id}
-                        onClick={() => setPendingDeleteId(n.id)}
-                      >
-                        מחק
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-secondary text-sm"
-                        disabled={savingId === n.id}
-                        onClick={() => setPendingArchiveId(n.id)}
-                      >
-                        הערה סגורה
+                        ביטול
                       </button>
                     </div>
-                  ) : null}
-                </>
-              )}
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm whitespace-pre-wrap text-ink-900">{n.content}</p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                      <span className={priorityBadgeClass(n.priority)}>
+                        {(PRIORITY_LABELS as Record<string, string>)[n.priority] ?? n.priority}
+                      </span>
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-800">פתוחה</span>
+                    </div>
+                    {canEdit ? (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-ghost text-sm"
+                          disabled={savingId === n.id}
+                          onClick={() => startEdit(n)}
+                        >
+                          ערוך
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost text-sm text-red-600 hover:text-red-700"
+                          disabled={savingId === n.id}
+                          onClick={() => setPendingDeleteId(n.id)}
+                        >
+                          מחק
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary text-sm"
+                          disabled={savingId === n.id}
+                          onClick={() => setPendingArchiveId(n.id)}
+                        >
+                          הערה סגורה
+                        </button>
+                      </div>
+                    ) : null}
+                  </>
+                )}
+              </div>
             </li>
           ))}
         </ul>
@@ -548,6 +588,27 @@ export function NotesPageClient() {
                 לא
               </button>
               <button type="button" className="btn btn-primary text-sm" onClick={() => void confirmRestore()}>
+                כן
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {pendingArchiveDeleteId != null ? (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          dir="rtl"
+        >
+          <div className="card p-6 max-w-md w-full shadow-lg space-y-4">
+            <p className="text-sm text-ink-800">למחוק הערה?</p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button type="button" className="btn btn-ghost text-sm" onClick={() => setPendingArchiveDeleteId(null)}>
+                לא
+              </button>
+              <button type="button" className="btn btn-primary text-sm" onClick={() => void confirmArchiveDelete()}>
                 כן
               </button>
             </div>
