@@ -72,7 +72,8 @@ export default async function GeneratedDocumentPage({
       : undefined;
 
   const clientDefaults =
-    doc.templateType === "employee_agreement" && doc.household
+    (doc.templateType === "employee_agreement" || doc.templateType === "employee_agreement_submission") &&
+    doc.household
       ? (() => {
           const registeredSpouse = doc.household.persons.find((p) => p.role === "husband");
           const spouse = doc.household.persons.find((p) => p.role === "wife");
@@ -103,7 +104,10 @@ export default async function GeneratedDocumentPage({
         })()
       : undefined;
 
-  if ((doc.templateType ?? "") === "employee_agreement") {
+  if (
+    (doc.templateType ?? "") === "employee_agreement" ||
+    (doc.templateType ?? "") === "employee_agreement_submission"
+  ) {
     return (
       <EmployeeAgreementTemplate
         documentId={doc.id}

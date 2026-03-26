@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 
 const TEMPLATE_LABELS: Record<string, string> = {
   employee_agreement: "הסכם שכיר",
+  employee_agreement_submission: "שכיר - חובת הגשה",
   client_refund_report: "דוח החזרים ללקוח",
 };
 

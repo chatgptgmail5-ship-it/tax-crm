@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 const TEMPLATE_OPTIONS = [
   { value: "employee_agreement", label: "הסכם שכיר" },
+  { value: "employee_agreement_submission", label: "שכיר - חובת הגשה" },
   { value: "client_refund_report", label: "דוח החזרים ללקוח" },
 ];
 
